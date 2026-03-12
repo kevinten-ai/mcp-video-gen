@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Multi-provider AI video generation MCP server, focused on free-tier models.</strong>
+  <strong>Multi-provider AI video, speech & music generation MCP server, focused on free-tier models.</strong>
 </p>
 
 <p align="center">
@@ -28,6 +28,15 @@
 | **SiliconFlow** (硅基流动) | Wan2.1-T2V-14B | $1 signup bonus | 720p |
 | **Vidu** (生数科技) | vidu-2.0 | 200 promo credits | 720p, 4s |
 | **MiniMax Hailuo** (海螺) | Hailuo 2.3 | Paid | Up to 1080P, 6-10s |
+
+### Audio Providers (TTS & Music)
+
+| Provider | Capability | Model | Pricing |
+|---|---|---|---|
+| **MiniMax TTS** (海螺语音) | Text-to-Speech | speech-2.6-hd | Paid (~¥0.01/request) |
+| **MiniMax Music** (海螺音乐) | Music Generation | music-2.0 | Paid (~¥0.1/song) |
+
+> TTS and Music are automatically enabled when `MINIMAX_API_KEY` is configured — no additional setup needed.
 
 ## Installation
 
@@ -185,9 +194,16 @@ Only configure the providers you want to use. At least one API key is required.
 
 ## Tools
 
+### Video
 - **generate_video** — Generate a video from a text prompt. Specify `provider` to choose backend.
 - **query_video_status** — Check generation status and download the result.
-- **list_providers** — Show all available providers and their free tier info.
+
+### Audio
+- **generate_speech** — Convert text to speech. Params: `text`, `voice_id` (optional), `speed` (0.5-2.0).
+- **generate_music** — Generate music from a style prompt with optional lyrics. Params: `prompt`, `lyrics` (optional, supports `[Verse]`/`[Chorus]` tags).
+
+### Utility
+- **list_providers** — Show all available video, TTS, and music providers.
 
 ## Architecture
 
@@ -195,20 +211,24 @@ Only configure the providers you want to use. At least one API key is required.
 src/video_gen/
 ├── __init__.py
 ├── server.py              # MCP server + tool definitions
-└── providers/
-    ├── __init__.py        # BaseProvider + registry
-    ├── cogvideo.py        # 智谱 CogVideoX-Flash
-    ├── dashscope.py       # 阿里 通义万相 Wan 2.6
-    ├── kling.py           # 可灵 Kling AI
-    ├── siliconflow.py     # 硅基流动 SiliconFlow
-    ├── vidu.py            # 生数 Vidu
-    └── minimax.py         # MiniMax 海螺
+├── providers/
+│   ├── __init__.py        # BaseProvider + registry
+│   ├── cogvideo.py        # 智谱 CogVideoX-Flash
+│   ├── dashscope.py       # 阿里 通义万相 Wan 2.6
+│   ├── kling.py           # 可灵 Kling AI
+│   ├── siliconflow.py     # 硅基流动 SiliconFlow
+│   ├── vidu.py            # 生数 Vidu
+│   └── minimax.py         # MiniMax 海螺
+└── audio/
+    ├── __init__.py        # BaseTTSProvider + BaseMusicProvider + registry
+    ├── minimax_tts.py     # MiniMax TTS (speech-2.6-hd)
+    └── minimax_music.py   # MiniMax Music (music-2.0)
 ```
 
 ### Adding a New Provider
 
-1. Create a new file under `src/video_gen/providers/` (e.g., `newprovider.py`)
-2. Implement the `BaseProvider` abstract class with `generate()` and `query()` methods
+1. Create a new file under `src/video_gen/providers/` or `src/video_gen/audio/`
+2. Implement the corresponding abstract base class (`BaseProvider`, `BaseTTSProvider`, or `BaseMusicProvider`)
 3. Register it in `server.py:_init_providers()` with an env var check
 
 ## License

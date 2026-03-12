@@ -1,7 +1,7 @@
 [project]
 name = "mcp-video-gen"
 version = "1.0.0"
-description = "MCP server for AI video generation with multiple providers. Supports CogVideoX-Flash (free unlimited), Kling AI (daily free credits), and MiniMax Hailuo."
+description = "MCP server for AI video, speech & music generation with multiple providers. Video: CogVideoX, DashScope, Kling, SiliconFlow, Vidu, MiniMax. Audio: MiniMax TTS & Music."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

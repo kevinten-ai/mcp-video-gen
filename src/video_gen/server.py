@@ -23,6 +23,16 @@ from .providers.minimax import MiniMaxProvider
 from .providers.dashscope import DashScopeProvider
 from .providers.siliconflow import SiliconFlowProvider
 from .providers.vidu import ViduProvider
+from .audio import (
+    register_tts,
+    register_music,
+    get_tts,
+    get_music,
+    list_tts as get_all_tts,
+    list_music as get_all_music,
+)
+from .audio.minimax_tts import MiniMaxTTSProvider
+from .audio.minimax_music import MiniMaxMusicProvider
 
 VIDEO_OUTPUT_DIR = os.getenv("VIDEO_OUTPUT_DIR", os.path.join(os.getcwd(), "output"))
 
@@ -57,6 +67,12 @@ def _init_providers() -> None:
     if vidu_key:
         register_provider(ViduProvider(vidu_key))
 
+    # Audio providers (TTS + Music)
+    if minimax_key:
+        minimax_host = os.getenv("MINIMAX_API_HOST", "https://api.minimax.chat")
+        register_tts(MiniMaxTTSProvider(minimax_key, minimax_host))
+        register_music(MiniMaxMusicProvider(minimax_key, minimax_host))
+
 
 _init_providers()
 
@@ -70,13 +86,13 @@ def _default_provider_name() -> str | None:
     return None
 
 
-async def _try_download(url: str, output_dir: str, prefix: str) -> str | None:
-    """Try to download video to local disk. Returns filepath or None on failure."""
+async def _try_download(url: str, output_dir: str, prefix: str, ext: str = "mp4") -> str | None:
+    """Try to download file to local disk. Returns filepath or None on failure."""
     try:
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filepath = out / f"{prefix}_{timestamp}.mp4"
+        filepath = out / f"{prefix}_{timestamp}.{ext}"
         async with httpx.AsyncClient(verify=False, follow_redirects=True) as client:
             resp = await client.get(url, timeout=120.0)
             if resp.status_code == 200 and len(resp.content) > 0:
@@ -85,6 +101,16 @@ async def _try_download(url: str, output_dir: str, prefix: str) -> str | None:
     except Exception:
         pass
     return None
+
+
+def _save_audio_bytes(data: bytes, output_dir: str, prefix: str, ext: str = "mp3") -> str:
+    """Save raw audio bytes to disk."""
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filepath = out / f"{prefix}_{timestamp}.{ext}"
+    filepath.write_bytes(data)
+    return str(filepath)
 
 
 @server.list_tools()
@@ -152,13 +178,73 @@ async def handle_list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="list_providers",
-            description="List all available video generation providers and their free tier info.",
+            description="List all available video, TTS, and music providers.",
             inputSchema={
                 "type": "object",
                 "properties": {},
             },
         ),
     ]
+
+    # TTS tool
+    tts_providers = get_all_tts()
+    if tts_providers:
+        tts_names = list(tts_providers.keys())
+        tools.append(types.Tool(
+            name="generate_speech",
+            description=f"Convert text to speech audio. Available TTS providers: {', '.join(tts_names)}.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "The text to convert to speech",
+                    },
+                    "voice_id": {
+                        "type": "string",
+                        "description": "Voice ID to use. Examples: female-shaonv, male-qn-qingse, cute_boy, Charming_Lady. Optional.",
+                    },
+                    "speed": {
+                        "type": "number",
+                        "description": "Speech speed (0.5-2.0). Default: 1.0",
+                        "default": 1.0,
+                    },
+                    "output_directory": {
+                        "type": "string",
+                        "description": "Directory to save audio. Optional.",
+                    },
+                },
+                "required": ["text"],
+            },
+        ))
+
+    # Music tool
+    music_providers = get_all_music()
+    if music_providers:
+        music_names = list(music_providers.keys())
+        tools.append(types.Tool(
+            name="generate_music",
+            description=f"Generate music from a style prompt and optional lyrics. Available providers: {', '.join(music_names)}.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "Music style description (e.g. 'Pop music, upbeat, suitable for workout'). 10-300 characters.",
+                    },
+                    "lyrics": {
+                        "type": "string",
+                        "description": "Optional lyrics with structure tags like [Verse], [Chorus], [Bridge]. Use \\n for line breaks. 10-600 characters.",
+                    },
+                    "output_directory": {
+                        "type": "string",
+                        "description": "Directory to save audio. Optional.",
+                    },
+                },
+                "required": ["prompt"],
+            },
+        ))
+
     return tools
 
 
@@ -170,13 +256,25 @@ async def handle_call_tool(
         arguments = {}
 
     if name == "list_providers":
-        providers = get_all_providers()
-        if not providers:
-            return [types.TextContent(type="text", text="No providers configured. Set API keys in environment variables.")]
         lines = []
-        for p in providers.values():
-            lines.append(f"**{p.name}** - {p.description}\n  Free tier: {p.free_tier_info}")
-        return [types.TextContent(type="text", text="\n\n".join(lines))]
+        providers = get_all_providers()
+        if providers:
+            lines.append("**Video Providers:**")
+            for p in providers.values():
+                lines.append(f"  **{p.name}** - {p.description}\n    Free tier: {p.free_tier_info}")
+        tts = get_all_tts()
+        if tts:
+            lines.append("\n**TTS Providers:**")
+            for p in tts.values():
+                lines.append(f"  **{p.name}** - {p.description}")
+        music = get_all_music()
+        if music:
+            lines.append("\n**Music Providers:**")
+            for p in music.values():
+                lines.append(f"  **{p.name}** - {p.description}")
+        if not lines:
+            return [types.TextContent(type="text", text="No providers configured.")]
+        return [types.TextContent(type="text", text="\n".join(lines))]
 
     if name == "generate_video":
         prompt = arguments.get("prompt")
@@ -235,6 +333,69 @@ async def handle_call_tool(
                 results.append(types.TextContent(type="text", text="Auto-download failed. Use the URL above to download manually."))
 
         return results
+
+    if name == "generate_speech":
+        text = arguments.get("text")
+        if not text:
+            return [types.TextContent(type="text", text="Missing text")]
+
+        tts_providers = get_all_tts()
+        if not tts_providers:
+            return [types.TextContent(type="text", text="No TTS providers configured. Set MINIMAX_API_KEY.")]
+
+        provider = list(tts_providers.values())[0]
+        voice_id = arguments.get("voice_id")
+        speed = arguments.get("speed", 1.0)
+
+        result = await provider.speak(text, voice_id=voice_id, speed=speed)
+
+        if result.status == "failed":
+            return [types.TextContent(type="text", text=f"TTS failed: {result.error}")]
+
+        output_dir = arguments.get("output_directory") or VIDEO_OUTPUT_DIR
+        results = []
+
+        if result.audio_url:
+            results.append(types.TextContent(type="text", text=f"Audio URL: {result.audio_url}"))
+            filepath = await _try_download(result.audio_url, output_dir, "tts", ext="mp3")
+            if filepath:
+                results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
+        elif result.audio_data:
+            filepath = _save_audio_bytes(result.audio_data, output_dir, "tts", ext="mp3")
+            results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
+
+        return results or [types.TextContent(type="text", text="No audio generated")]
+
+    if name == "generate_music":
+        prompt = arguments.get("prompt")
+        if not prompt:
+            return [types.TextContent(type="text", text="Missing prompt")]
+
+        music_providers = get_all_music()
+        if not music_providers:
+            return [types.TextContent(type="text", text="No music providers configured. Set MINIMAX_API_KEY.")]
+
+        provider = list(music_providers.values())[0]
+        lyrics = arguments.get("lyrics")
+
+        result = await provider.generate(prompt, lyrics=lyrics)
+
+        if result.status == "failed":
+            return [types.TextContent(type="text", text=f"Music generation failed: {result.error}")]
+
+        output_dir = arguments.get("output_directory") or VIDEO_OUTPUT_DIR
+        results = []
+
+        if result.audio_url:
+            results.append(types.TextContent(type="text", text=f"Music URL: {result.audio_url}"))
+            filepath = await _try_download(result.audio_url, output_dir, "music", ext="mp3")
+            if filepath:
+                results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
+        elif result.audio_data:
+            filepath = _save_audio_bytes(result.audio_data, output_dir, "music", ext="mp3")
+            results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
+
+        return results or [types.TextContent(type="text", text="No music generated")]
 
     return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
 

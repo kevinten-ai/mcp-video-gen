@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>多平台 AI 视频生成 MCP 服务器，专注于免费额度模型。</strong>
+  <strong>多平台 AI 视频、语音、音乐生成 MCP 服务器，专注于免费额度模型。</strong>
 </p>
 
 <p align="center">
@@ -28,6 +28,15 @@
 | **硅基流动** SiliconFlow | Wan2.1-T2V-14B | 注册送$1（约3个视频） | 720p |
 | **生数科技** Vidu | vidu-2.0 | 申请200积分（促销） | 720p, 4秒 |
 | **MiniMax 海螺** Hailuo 2.3 | Hailuo 2.3 | 付费 | 最高1080P, 6-10秒 |
+
+### 音频能力（语音合成 & 音乐生成）
+
+| 平台 | 能力 | 模型 | 价格 |
+|---|---|---|---|
+| **MiniMax 海螺语音** | 文字转语音 (TTS) | speech-2.6-hd | 付费（约 ¥0.01/次） |
+| **MiniMax 海螺音乐** | AI 音乐生成 | music-2.0 | 付费（约 ¥0.1/首） |
+
+> 配置 `MINIMAX_API_KEY` 后，TTS 和音乐生成功能自动启用，无需额外配置。
 
 ## 安装
 
@@ -185,9 +194,16 @@ claude mcp add -s user mcp-video-gen \
 
 ## 工具说明
 
+### 视频
 - **generate_video** — 根据文字描述生成视频。通过 `provider` 参数选择平台。
 - **query_video_status** — 查询视频生成状态，完成后自动下载。
-- **list_providers** — 列出所有可用平台及其免费额度信息。
+
+### 音频
+- **generate_speech** — 文字转语音。参数：`text`（文本）、`voice_id`（可选，声音ID）、`speed`（0.5-2.0，语速）。
+- **generate_music** — 根据风格描述生成音乐，支持歌词。参数：`prompt`（风格描述）、`lyrics`（可选，支持 `[Verse]`/`[Chorus]` 结构标签）。
+
+### 工具
+- **list_providers** — 列出所有可用的视频、语音、音乐平台。
 
 ## 项目结构
 
@@ -195,20 +211,24 @@ claude mcp add -s user mcp-video-gen \
 src/video_gen/
 ├── __init__.py
 ├── server.py              # MCP 服务器 + 工具定义
-└── providers/
-    ├── __init__.py        # Provider 基类 + 注册机制
-    ├── cogvideo.py        # 智谱 CogVideoX-Flash
-    ├── dashscope.py       # 阿里 通义万相 Wan 2.6
-    ├── kling.py           # 可灵 Kling AI
-    ├── siliconflow.py     # 硅基流动 SiliconFlow
-    ├── vidu.py            # 生数 Vidu
-    └── minimax.py         # MiniMax 海螺
+├── providers/
+│   ├── __init__.py        # Provider 基类 + 注册机制
+│   ├── cogvideo.py        # 智谱 CogVideoX-Flash
+│   ├── dashscope.py       # 阿里 通义万相 Wan 2.6
+│   ├── kling.py           # 可灵 Kling AI
+│   ├── siliconflow.py     # 硅基流动 SiliconFlow
+│   ├── vidu.py            # 生数 Vidu
+│   └── minimax.py         # MiniMax 海螺
+└── audio/
+    ├── __init__.py        # TTS/音乐 基类 + 注册机制
+    ├── minimax_tts.py     # MiniMax 语音合成 (speech-2.6-hd)
+    └── minimax_music.py   # MiniMax 音乐生成 (music-2.0)
 ```
 
 ### 添加新平台
 
-1. 在 `src/video_gen/providers/` 下创建新文件
-2. 实现 `BaseProvider` 抽象类的 `generate()` 和 `query()` 方法
+1. 在 `src/video_gen/providers/` 或 `src/video_gen/audio/` 下创建新文件
+2. 实现对应的抽象基类（`BaseProvider`、`BaseTTSProvider` 或 `BaseMusicProvider`）
 3. 在 `server.py:_init_providers()` 中注册，通过环境变量控制启用
 
 ## 许可证
