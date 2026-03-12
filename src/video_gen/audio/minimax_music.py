@@ -33,8 +33,7 @@ class MiniMaxMusicProvider(BaseMusicProvider):
             },
             "output_format": "url",
         }
-        if lyrics:
-            body["lyrics"] = lyrics
+        body["lyrics"] = lyrics if lyrics else "[Instrumental]"
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(
