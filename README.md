@@ -1,6 +1,22 @@
 # mcp-video-gen
 
-MCP server for AI video generation with multiple providers. Focus on free-tier models.
+<p align="center">
+  <img src="docs/banner.png" alt="mcp-video-gen banner" width="800">
+</p>
+
+<p align="center">
+  <strong>Multi-provider AI video generation MCP server, focused on free-tier models.</strong>
+</p>
+
+<p align="center">
+  <a href="README_CN.md">中文文档</a>
+</p>
+
+## Architecture
+
+<p align="center">
+  <img src="docs/architecture.png" alt="Architecture" width="800">
+</p>
 
 ## Supported Providers
 
