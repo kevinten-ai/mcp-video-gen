@@ -28,6 +28,7 @@
 | **SiliconFlow** (硅基流动) | Wan2.1-T2V-14B | $1 signup bonus | 720p |
 | **Vidu** (生数科技) | vidu-2.0 | 200 promo credits | 720p, 4s |
 | **MiniMax Hailuo** (海螺) | Hailuo 2.3 | Paid | Up to 1080P, 6-10s |
+| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP credits | 720p-1080p, 5-8s |
 
 ### Audio Providers (TTS & Music)
 
@@ -178,6 +179,41 @@ Only configure the providers you want to use. At least one API key is required.
 
 ---
 
+### 7. Google Veo (Vertex AI) — GCP Credits
+
+| Item | Detail |
+|---|---|
+| Platform | Google Cloud Vertex AI |
+| URL | https://console.cloud.google.com |
+| Free Tier | **No free tier. Uses GCP credits/billing. ~$0.15-$0.75/second** |
+| Env Vars | `GCP_PROJECT_ID`, `GCP_REGION` (optional) |
+
+**Steps:**
+1. Create a GCP project with billing: https://console.cloud.google.com/projectcreate
+2. Enable Vertex AI API: https://console.cloud.google.com/apis/library/aiplatform.googleapis.com
+3. Install gcloud CLI and authenticate: `gcloud auth application-default login`
+4. Install with GCP support: `uv sync --extra gcp`
+
+**Models:**
+
+| Model | Resolution | Pricing |
+|---|---|---|
+| `veo-2.0-generate-001` (default) | 720p | ~$0.50/sec |
+| `veo-3.0-generate-001` | 1080p | ~$0.75/sec |
+| `veo-3.0-fast-generate-001` | 1080p | ~$0.15/sec |
+
+**Optional env vars:**
+
+| Variable | Default | Description |
+|---|---|---|
+| `VEO_MODEL` | `veo-2.0-generate-001` | Model to use |
+| `VEO_GCS_BUCKET` | — | GCS bucket for output (omit for base64 inline) |
+| `GCP_REGION` | `us-central1` | Vertex AI region |
+
+> **Note:** Veo uses OAuth2 (ADC) authentication, not API keys. Run `gcloud auth application-default login` before use. Add `--extra gcp` to your uv command to install `google-auth`.
+
+---
+
 ## Environment Variables Summary
 
 | Variable | Provider | Required |
@@ -190,6 +226,10 @@ Only configure the providers you want to use. At least one API key is required.
 | `VIDU_API_KEY` | Vidu (生数) | |
 | `MINIMAX_API_KEY` | MiniMax (海螺) | |
 | `MINIMAX_API_HOST` | MiniMax (海螺) | Optional, default: `https://api.minimax.chat` |
+| `GCP_PROJECT_ID` | Google Veo | Required for Veo |
+| `GCP_REGION` | Google Veo | Optional, default: `us-central1` |
+| `VEO_MODEL` | Google Veo | Optional, default: `veo-2.0-generate-001` |
+| `VEO_GCS_BUCKET` | Google Veo | Optional, GCS bucket for video output |
 | `VIDEO_OUTPUT_DIR` | Output path | Optional, default: `./output` |
 
 ## Tools
@@ -218,7 +258,8 @@ src/video_gen/
 │   ├── kling.py           # 可灵 Kling AI
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow
 │   ├── vidu.py            # 生数 Vidu
-│   └── minimax.py         # MiniMax 海螺
+│   ├── minimax.py         # MiniMax 海螺
+│   └── veo.py             # Google Veo (Vertex AI)
 └── audio/
     ├── __init__.py        # BaseTTSProvider + BaseMusicProvider + registry
     ├── minimax_tts.py     # MiniMax TTS (speech-2.6-hd)

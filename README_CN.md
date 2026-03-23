@@ -28,6 +28,7 @@
 | **硅基流动** SiliconFlow | Wan2.1-T2V-14B | 注册送$1（约3个视频） | 720p |
 | **生数科技** Vidu | vidu-2.0 | 申请200积分（促销） | 720p, 4秒 |
 | **MiniMax 海螺** Hailuo 2.3 | Hailuo 2.3 | 付费 | 最高1080P, 6-10秒 |
+| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP 赠金 | 720p-1080p, 5-8秒 |
 
 ### 音频能力（语音合成 & 音乐生成）
 
@@ -178,6 +179,41 @@ claude mcp add -s user mcp-video-gen \
 
 ---
 
+### 7. Google Veo (Vertex AI) — GCP 赠金
+
+| 项目 | 详情 |
+|---|---|
+| 平台 | Google Cloud Vertex AI |
+| 地址 | https://console.cloud.google.com |
+| 免费额度 | **无免费额度。使用 GCP 赠金/计费。~$0.15-$0.75/秒** |
+| 环境变量 | `GCP_PROJECT_ID`，`GCP_REGION`（可选） |
+
+**配置步骤：**
+1. 创建 GCP 项目并启用计费：https://console.cloud.google.com/projectcreate
+2. 启用 Vertex AI API：https://console.cloud.google.com/apis/library/aiplatform.googleapis.com
+3. 安装 gcloud CLI 并认证：`gcloud auth application-default login`
+4. 安装 GCP 依赖：`uv sync --extra gcp`
+
+**可用模型：**
+
+| 模型 | 分辨率 | 价格 |
+|---|---|---|
+| `veo-2.0-generate-001`（默认） | 720p | ~$0.50/秒 |
+| `veo-3.0-generate-001` | 1080p | ~$0.75/秒 |
+| `veo-3.0-fast-generate-001` | 1080p | ~$0.15/秒 |
+
+**可选环境变量：**
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `VEO_MODEL` | `veo-2.0-generate-001` | 使用的模型 |
+| `VEO_GCS_BUCKET` | — | 视频输出 GCS 存储桶（不设则用 base64 内联返回） |
+| `GCP_REGION` | `us-central1` | Vertex AI 区域 |
+
+> **注意：** Veo 使用 OAuth2 (ADC) 认证，不支持 API Key。使用前需运行 `gcloud auth application-default login`。uv 命令中需加 `--extra gcp` 来安装 `google-auth`。
+
+---
+
 ## 环境变量汇总
 
 | 变量 | 平台 | 说明 |
@@ -190,6 +226,10 @@ claude mcp add -s user mcp-video-gen \
 | `VIDU_API_KEY` | 生数 Vidu | |
 | `MINIMAX_API_KEY` | MiniMax 海螺 | |
 | `MINIMAX_API_HOST` | MiniMax 海螺 | 可选，默认 `https://api.minimax.chat` |
+| `GCP_PROJECT_ID` | Google Veo | Veo 必填 |
+| `GCP_REGION` | Google Veo | 可选，默认 `us-central1` |
+| `VEO_MODEL` | Google Veo | 可选，默认 `veo-2.0-generate-001` |
+| `VEO_GCS_BUCKET` | Google Veo | 可选，视频输出 GCS 存储桶 |
 | `VIDEO_OUTPUT_DIR` | 输出目录 | 可选，默认 `./output` |
 
 ## 工具说明
@@ -218,7 +258,8 @@ src/video_gen/
 │   ├── kling.py           # 可灵 Kling AI
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow
 │   ├── vidu.py            # 生数 Vidu
-│   └── minimax.py         # MiniMax 海螺
+│   ├── minimax.py         # MiniMax 海螺
+│   └── veo.py             # Google Veo (Vertex AI)
 └── audio/
     ├── __init__.py        # TTS/音乐 基类 + 注册机制
     ├── minimax_tts.py     # MiniMax 语音合成 (speech-2.6-hd)
