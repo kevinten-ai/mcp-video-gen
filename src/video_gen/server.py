@@ -23,6 +23,10 @@ from .providers.minimax import MiniMaxProvider
 from .providers.dashscope import DashScopeProvider
 from .providers.siliconflow import SiliconFlowProvider
 from .providers.vidu import ViduProvider
+try:
+    from .providers.veo import VeoProvider
+except ImportError:
+    VeoProvider = None  # google-auth not installed
 from .audio import (
     register_tts,
     register_music,
@@ -67,6 +71,12 @@ def _init_providers() -> None:
     if vidu_key:
         register_provider(ViduProvider(vidu_key))
 
+    # Veo (Google Vertex AI) — requires google-auth
+    gcp_project = os.getenv("GCP_PROJECT_ID", "")
+    if gcp_project and VeoProvider is not None:
+        gcp_region = os.getenv("GCP_REGION", "us-central1")
+        register_provider(VeoProvider(gcp_project, gcp_region))
+
     # Audio providers (TTS + Music)
     if minimax_key:
         minimax_host = os.getenv("MINIMAX_API_HOST", "https://api.minimax.chat")
@@ -80,7 +90,7 @@ _init_providers()
 def _default_provider_name() -> str | None:
     """Return the default provider name (prefer free providers)."""
     providers = get_all_providers()
-    for name in ("cogvideo", "dashscope", "kling", "siliconflow", "vidu", "minimax"):
+    for name in ("cogvideo", "dashscope", "kling", "siliconflow", "vidu", "minimax", "veo"):
         if name in providers:
             return name
     return None
@@ -321,16 +331,22 @@ async def handle_call_tool(
         if result.status == "failed":
             return [types.TextContent(type="text", text=f"Failed: {result.error}")]
 
-        # Success - try to download
-        results = [types.TextContent(type="text", text=f"Video ready!\nURL: {result.video_url}")]
+        # Success
+        video_url = result.video_url or ""
+        is_local_file = video_url.startswith("/") or video_url.startswith(".")
+        results = []
 
-        if result.video_url:
-            output_dir = arguments.get("output_directory") or VIDEO_OUTPUT_DIR
-            filepath = await _try_download(result.video_url, output_dir, provider_name)
-            if filepath:
-                results.append(types.TextContent(type="text", text=f"Downloaded to: {filepath}"))
-            else:
-                results.append(types.TextContent(type="text", text="Auto-download failed. Use the URL above to download manually."))
+        if is_local_file:
+            results.append(types.TextContent(type="text", text=f"Video ready!\nSaved to: {video_url}"))
+        else:
+            results.append(types.TextContent(type="text", text=f"Video ready!\nURL: {video_url}"))
+            if video_url:
+                output_dir = arguments.get("output_directory") or VIDEO_OUTPUT_DIR
+                filepath = await _try_download(video_url, output_dir, provider_name)
+                if filepath:
+                    results.append(types.TextContent(type="text", text=f"Downloaded to: {filepath}"))
+                else:
+                    results.append(types.TextContent(type="text", text="Auto-download failed. Use the URL above to download manually."))
 
         return results
 
@@ -407,7 +423,7 @@ async def main():
             write_stream,
             InitializationOptions(
                 server_name="mcp-video-gen",
-                server_version="1.0.0",
+                server_version="1.1.0",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},
