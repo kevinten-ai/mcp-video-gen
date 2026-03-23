@@ -19,7 +19,7 @@ build-backend = "hatchling.build"
 packages = ["src/video_gen"]
 
 [project.optional-dependencies]
-gcp = ["google-auth>=2.20.0"]
+gcp = ["google-auth>=2.20.0", "requests>=2.20.0"]
 
 [project.scripts]
 video-gen = "video_gen:main"
