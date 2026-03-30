@@ -210,7 +210,11 @@ Only configure the providers you want to use. At least one API key is required.
 | `VEO_GCS_BUCKET` | — | GCS bucket for output (omit for base64 inline) |
 | `GCP_REGION` | `us-central1` | Vertex AI region |
 
-> **Note:** Veo uses OAuth2 (ADC) authentication, not API keys. Run `gcloud auth application-default login` before use. Add `--extra gcp` to your uv command to install `google-auth`.
+> **Auth options:** Veo supports two authentication methods:
+> 1. **GCP API Key** (recommended) — set `GEMINI_API_KEY=your_gcp_api_key`. Simplest setup.
+> 2. **OAuth2 / ADC** — run `gcloud auth application-default login`. No API key needed. Requires `--extra gcp`.
+>
+> Add `--extra gcp` to your uv command if using ADC.
 
 ---
 

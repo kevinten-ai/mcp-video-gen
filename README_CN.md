@@ -210,7 +210,9 @@ claude mcp add -s user mcp-video-gen \
 | `VEO_GCS_BUCKET` | — | 视频输出 GCS 存储桶（不设则用 base64 内联返回） |
 | `GCP_REGION` | `us-central1` | Vertex AI 区域 |
 
-> **注意：** Veo 使用 OAuth2 (ADC) 认证，不支持 API Key。使用前需运行 `gcloud auth application-default login`。uv 命令中需加 `--extra gcp` 来安装 `google-auth`。
+> **认证方式：** Veo 支持两种认证：
+> 1. **GCP API Key**（推荐）— 设置 `GEMINI_API_KEY=你的gcp_api_key`，最简单
+> 2. **OAuth2 / ADC** — 运行 `gcloud auth application-default login`，无需 API Key，需加 `--extra gcp`
 
 ---
 
