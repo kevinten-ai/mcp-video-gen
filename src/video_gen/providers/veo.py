@@ -15,6 +15,8 @@ MODELS = {
     "veo-2.0-generate-001": {"name": "Veo 2", "resolution": "720p", "pricing": "~$0.50/s"},
     "veo-3.0-generate-001": {"name": "Veo 3", "resolution": "1080p", "pricing": "~$0.75/s"},
     "veo-3.0-fast-generate-001": {"name": "Veo 3 Fast", "resolution": "1080p", "pricing": "~$0.15/s"},
+    "veo-3.1-generate-001": {"name": "Veo 3.1", "resolution": "4K", "pricing": "~$0.75/s"},
+    "veo-3.1-fast-generate-001": {"name": "Veo 3.1 Fast", "resolution": "1080p", "pricing": "~$0.10/s"},
 }
 
 DEFAULT_MODEL = os.getenv("VEO_MODEL", "veo-2.0-generate-001")

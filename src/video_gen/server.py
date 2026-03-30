@@ -37,6 +37,12 @@ from .audio import (
 )
 from .audio.minimax_tts import MiniMaxTTSProvider
 from .audio.minimax_music import MiniMaxMusicProvider
+try:
+    from .audio.google_lyria import GoogleLyriaProvider
+    from .audio.google_tts import GoogleTTSProvider
+except ImportError:
+    GoogleLyriaProvider = None
+    GoogleTTSProvider = None
 
 VIDEO_OUTPUT_DIR = os.getenv("VIDEO_OUTPUT_DIR", os.path.join(os.getcwd(), "output"))
 
@@ -88,6 +94,14 @@ def _init_providers() -> None:
         minimax_host = os.getenv("MINIMAX_API_HOST", "https://api.minimax.chat")
         register_tts(MiniMaxTTSProvider(minimax_key, minimax_host))
         register_music(MiniMaxMusicProvider(minimax_key, minimax_host))
+
+    # Google audio providers (Lyria + TTS) — same GCP credentials as Veo
+    if gcp_project and (gcp_api_key or GoogleLyriaProvider is not None):
+        gcp_region = os.getenv("GCP_REGION", "us-central1")
+        if GoogleLyriaProvider is not None:
+            register_music(GoogleLyriaProvider(gcp_project, gcp_region))
+        if GoogleTTSProvider is not None:
+            register_tts(GoogleTTSProvider())
 
 
 _init_providers()
@@ -206,9 +220,14 @@ async def handle_list_tools() -> list[types.Tool]:
     tts_providers = get_all_tts()
     if tts_providers:
         tts_names = list(tts_providers.keys())
+        default_tts = tts_names[0]
+        tts_voice_desc = (
+            "Voice ID. MiniMax: female-shaonv, male-qn-qingse, cute_boy, Charming_Lady. "
+            "Google TTS: charon (male-en), achernar (female-en), charon-zh (male-zh), kore-zh (female-zh). Optional."
+        )
         tools.append(types.Tool(
             name="generate_speech",
-            description=f"Convert text to speech audio. Available TTS providers: {', '.join(tts_names)}.",
+            description=f"Convert text to speech audio. Available TTS providers: {', '.join(tts_names)}. Default: {default_tts}.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -216,9 +235,14 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "The text to convert to speech",
                     },
+                    "provider": {
+                        "type": "string",
+                        "description": f"TTS provider: {', '.join(tts_names)}. Default: {default_tts}",
+                        "enum": tts_names,
+                    },
                     "voice_id": {
                         "type": "string",
-                        "description": "Voice ID to use. Examples: female-shaonv, male-qn-qingse, cute_boy, Charming_Lady. Optional.",
+                        "description": tts_voice_desc,
                     },
                     "speed": {
                         "type": "number",
@@ -238,9 +262,10 @@ async def handle_list_tools() -> list[types.Tool]:
     music_providers = get_all_music()
     if music_providers:
         music_names = list(music_providers.keys())
+        default_music = music_names[0]
         tools.append(types.Tool(
             name="generate_music",
-            description=f"Generate music from a style prompt and optional lyrics. Available providers: {', '.join(music_names)}.",
+            description=f"Generate music from a style prompt and optional lyrics. Available providers: {', '.join(music_names)}. Default: {default_music}. google-lyria: instrumental only, ~33s WAV.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -248,9 +273,14 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "Music style description (e.g. 'Pop music, upbeat, suitable for workout'). 10-300 characters.",
                     },
+                    "provider": {
+                        "type": "string",
+                        "description": f"Music provider: {', '.join(music_names)}. Default: {default_music}",
+                        "enum": music_names,
+                    },
                     "lyrics": {
                         "type": "string",
-                        "description": "Optional lyrics with structure tags like [Verse], [Chorus], [Bridge]. Use \\n for line breaks. 10-600 characters.",
+                        "description": "Optional lyrics with structure tags like [Verse], [Chorus], [Bridge]. Use \\n for line breaks. 10-600 characters. Note: google-lyria only generates instrumental music.",
                     },
                     "output_directory": {
                         "type": "string",
@@ -363,9 +393,13 @@ async def handle_call_tool(
 
         tts_providers = get_all_tts()
         if not tts_providers:
-            return [types.TextContent(type="text", text="No TTS providers configured. Set MINIMAX_API_KEY.")]
+            return [types.TextContent(type="text", text="No TTS providers configured. Set MINIMAX_API_KEY or GCP_PROJECT_ID.")]
 
-        provider = list(tts_providers.values())[0]
+        provider_name = arguments.get("provider") or list(tts_providers.keys())[0]
+        provider = tts_providers.get(provider_name)
+        if not provider:
+            return [types.TextContent(type="text", text=f"Unknown TTS provider: {provider_name}. Available: {', '.join(tts_providers.keys())}")]
+
         voice_id = arguments.get("voice_id")
         speed = arguments.get("speed", 1.0)
 
@@ -375,15 +409,16 @@ async def handle_call_tool(
             return [types.TextContent(type="text", text=f"TTS failed: {result.error}")]
 
         output_dir = arguments.get("output_directory") or VIDEO_OUTPUT_DIR
+        ext = "wav" if provider_name == "google-lyria" else "mp3"
         results = []
 
         if result.audio_url:
             results.append(types.TextContent(type="text", text=f"Audio URL: {result.audio_url}"))
-            filepath = await _try_download(result.audio_url, output_dir, "tts", ext="mp3")
+            filepath = await _try_download(result.audio_url, output_dir, provider_name, ext=ext)
             if filepath:
                 results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
         elif result.audio_data:
-            filepath = _save_audio_bytes(result.audio_data, output_dir, "tts", ext="mp3")
+            filepath = _save_audio_bytes(result.audio_data, output_dir, provider_name, ext=ext)
             results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
 
         return results or [types.TextContent(type="text", text="No audio generated")]
@@ -395,9 +430,13 @@ async def handle_call_tool(
 
         music_providers = get_all_music()
         if not music_providers:
-            return [types.TextContent(type="text", text="No music providers configured. Set MINIMAX_API_KEY.")]
+            return [types.TextContent(type="text", text="No music providers configured. Set MINIMAX_API_KEY or GCP_PROJECT_ID.")]
 
-        provider = list(music_providers.values())[0]
+        provider_name = arguments.get("provider") or list(music_providers.keys())[0]
+        provider = music_providers.get(provider_name)
+        if not provider:
+            return [types.TextContent(type="text", text=f"Unknown music provider: {provider_name}. Available: {', '.join(music_providers.keys())}")]
+
         lyrics = arguments.get("lyrics")
 
         result = await provider.generate(prompt, lyrics=lyrics)
@@ -406,15 +445,16 @@ async def handle_call_tool(
             return [types.TextContent(type="text", text=f"Music generation failed: {result.error}")]
 
         output_dir = arguments.get("output_directory") or VIDEO_OUTPUT_DIR
+        ext = "wav" if provider_name == "google-lyria" else "mp3"
         results = []
 
         if result.audio_url:
             results.append(types.TextContent(type="text", text=f"Music URL: {result.audio_url}"))
-            filepath = await _try_download(result.audio_url, output_dir, "music", ext="mp3")
+            filepath = await _try_download(result.audio_url, output_dir, provider_name, ext=ext)
             if filepath:
                 results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
         elif result.audio_data:
-            filepath = _save_audio_bytes(result.audio_data, output_dir, "music", ext="mp3")
+            filepath = _save_audio_bytes(result.audio_data, output_dir, provider_name, ext=ext)
             results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
 
         return results or [types.TextContent(type="text", text="No music generated")]
