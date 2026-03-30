@@ -19,7 +19,11 @@ MODELS = {
 
 DEFAULT_MODEL = os.getenv("VEO_MODEL", "veo-2.0-generate-001")
 GCS_BUCKET = os.getenv("VEO_GCS_BUCKET", "")
-GCP_API_KEY = os.getenv("GEMINI_API_KEY", "") or os.getenv("GCP_API_KEY", "")
+
+
+def _get_api_key() -> str:
+    """Read API key at call time (not import time) so env changes are picked up."""
+    return os.getenv("GEMINI_API_KEY", "") or os.getenv("GCP_API_KEY", "")
 
 
 def _get_access_token() -> str:
@@ -36,8 +40,9 @@ def _get_access_token() -> str:
 
 def _get_auth(url: str) -> tuple[str, dict[str, str]]:
     """Get authenticated URL and headers. Prefers API key, falls back to ADC."""
-    if GCP_API_KEY:
-        return f"{url}?key={GCP_API_KEY}", {"Content-Type": "application/json"}
+    api_key = _get_api_key()
+    if api_key:
+        return f"{url}?key={api_key}", {"Content-Type": "application/json"}
     token = _get_access_token()
     return url, {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
