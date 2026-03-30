@@ -28,6 +28,7 @@ class SiliconFlowProvider(BaseProvider):
         prompt: str,
         duration: int = 5,
         aspect_ratio: str = "16:9",
+        image_url: str | None = None,
     ) -> VideoResult:
         size_map = {
             "16:9": "1280x720",

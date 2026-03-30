@@ -36,6 +36,7 @@ class BaseProvider(ABC):
         prompt: str,
         duration: int = 5,
         aspect_ratio: str = "16:9",
+        image_url: str | None = None,
     ) -> VideoResult:
         ...
 

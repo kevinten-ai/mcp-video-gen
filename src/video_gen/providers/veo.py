@@ -67,6 +67,29 @@ class VeoProvider(BaseProvider):
     def free_tier_info(self) -> str:
         return "Uses GCP credits/billing. No free tier."
 
+    async def _load_image(self, image_url: str) -> dict | None:
+        """Load image from local path or URL, return Vertex AI image dict."""
+        try:
+            if image_url.startswith(("http://", "https://")):
+                async with httpx.AsyncClient(verify=False) as client:
+                    resp = await client.get(image_url, timeout=30.0)
+                    if resp.status_code == 200:
+                        img_b64 = base64.b64encode(resp.content).decode()
+                        mime = resp.headers.get("content-type", "image/png")
+                        return {"bytesBase64Encoded": img_b64, "mimeType": mime}
+            elif image_url.startswith("gs://"):
+                return {"gcsUri": image_url, "mimeType": "image/png"}
+            else:
+                # Local file path
+                path = Path(image_url)
+                if path.exists():
+                    img_b64 = base64.b64encode(path.read_bytes()).decode()
+                    mime = "image/jpeg" if path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
+                    return {"bytesBase64Encoded": img_b64, "mimeType": mime}
+        except Exception:
+            pass
+        return None
+
     def _base_url(self, model: str) -> str:
         return (
             f"https://{self.region}-aiplatform.googleapis.com/v1/"
@@ -79,6 +102,7 @@ class VeoProvider(BaseProvider):
         prompt: str,
         duration: int = 8,
         aspect_ratio: str = "16:9",
+        image_url: str | None = None,
     ) -> VideoResult:
         model = DEFAULT_MODEL
         url = f"{self._base_url(model)}:predictLongRunning"
@@ -93,8 +117,16 @@ class VeoProvider(BaseProvider):
         if GCS_BUCKET:
             parameters["storageUri"] = f"gs://{GCS_BUCKET}/"
 
+        instance: dict = {"prompt": prompt}
+
+        # img2vid: add reference image
+        if image_url:
+            image_data = await self._load_image(image_url)
+            if image_data:
+                instance["image"] = image_data
+
         body = {
-            "instances": [{"prompt": prompt}],
+            "instances": [instance],
             "parameters": parameters,
         }
 

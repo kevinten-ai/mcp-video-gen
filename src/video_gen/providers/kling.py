@@ -40,6 +40,7 @@ class KlingProvider(BaseProvider):
         prompt: str,
         duration: int = 5,
         aspect_ratio: str = "16:9",
+        image_url: str | None = None,
     ) -> VideoResult:
         body = {
             "model_name": "kling-v2-master",

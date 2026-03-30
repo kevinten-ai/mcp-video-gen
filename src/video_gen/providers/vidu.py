@@ -28,6 +28,7 @@ class ViduProvider(BaseProvider):
         prompt: str,
         duration: int = 4,
         aspect_ratio: str = "16:9",
+        image_url: str | None = None,
     ) -> VideoResult:
         body = {
             "model": "vidu-2.0",

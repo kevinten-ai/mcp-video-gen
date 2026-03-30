@@ -27,6 +27,7 @@ class MiniMaxProvider(BaseProvider):
         prompt: str,
         duration: int = 6,
         aspect_ratio: str = "16:9",
+        image_url: str | None = None,
     ) -> VideoResult:
         body = {
             "model": "MiniMax-Hailuo-2.3",

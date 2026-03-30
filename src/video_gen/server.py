@@ -159,7 +159,7 @@ async def handle_list_tools() -> list[types.Tool]:
     tools = [
         types.Tool(
             name="generate_video",
-            description=f"Generate a video from a text prompt. Available providers: {', '.join(provider_names) or 'none configured'}. Default: {default or 'none'}.",
+            description=f"Generate a video from a text prompt (text-to-video) or from an image + prompt (image-to-video, veo only). Available providers: {', '.join(provider_names) or 'none configured'}. Default: {default or 'none'}.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -171,6 +171,10 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": f"Provider to use: {', '.join(provider_names)}. Default: {default}",
                         "enum": provider_names if provider_names else ["none"],
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "description": "Reference image for image-to-video generation (veo only). Accepts: local file path, HTTP URL, or gs:// URI. Optional.",
                     },
                     "duration": {
                         "type": "integer",
@@ -345,8 +349,9 @@ async def handle_call_tool(
 
         duration = arguments.get("duration", 5)
         aspect_ratio = arguments.get("aspect_ratio", "16:9")
+        image_url = arguments.get("image_url")
 
-        result = await provider.generate(prompt, duration=duration, aspect_ratio=aspect_ratio)
+        result = await provider.generate(prompt, duration=duration, aspect_ratio=aspect_ratio, image_url=image_url)
 
         if result.status == "failed":
             return [types.TextContent(type="text", text=f"Failed: {result.error}")]
