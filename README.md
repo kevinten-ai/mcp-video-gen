@@ -5,12 +5,31 @@
 </p>
 
 <p align="center">
-  <strong>Multi-provider AI video, speech & music generation MCP server, focused on free-tier models.</strong>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
+  <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
+  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version 1.1.0">
+</p>
+
+<p align="center">
+  <strong>Multi-provider AI video, speech & music generation MCP server.</strong><br>
+  7 video providers, TTS, music generation — one unified interface.<br>
+  Works with Claude Code, Claude Desktop, Cursor, and any MCP-compatible client.
 </p>
 
 <p align="center">
   <a href="README_CN.md">中文文档</a>
 </p>
+
+## Features
+
+- **7 video providers** — CogVideoX, DashScope/Wan, Kling, SiliconFlow, Vidu, MiniMax, Google Veo
+- **TTS & music** — text-to-speech and AI music generation via MiniMax
+- **Free-tier focused** — CogVideoX is completely free with unlimited usage
+- **Async generation** — submit → poll → auto-download workflow
+- **Provider switching** — choose the best provider per request via `provider` parameter
+- **Auto-download** — generated videos/audio saved to local disk automatically
+- **GCP Veo support** — high-quality Vertex AI video generation with API key or ADC auth
 
 ## Architecture
 
@@ -18,48 +37,147 @@
   <img src="docs/architecture.png" alt="Architecture" width="800">
 </p>
 
+### How It Works
+
+```
+User Prompt → AI Assistant (Claude / Cursor) → MCP Server → Provider API
+                                                    ↓
+                                        generate_video() → task_id
+                                        query_video_status(task_id) → download to disk
+```
+
+All video providers use an **async pattern**: submit a generation request, get a task ID, then poll until complete. The MCP server handles this transparently — the AI assistant calls `generate_video`, then `query_video_status` in a loop until the video is ready.
+
 ## Supported Providers
 
-| Provider | Model | Free Tier | Quality |
-|---|---|---|---|
-| **CogVideoX-Flash** (智谱) | cogvideox-flash | Unlimited free | 1440x960, 6s |
-| **DashScope / Wan** (通义万相) | wan2.6-t2v | 50s free (90 days) | Up to 1080P, 5-10s |
-| **Kling AI** (可灵) | kling-v2-master | 66 credits/day | 720p, 5-10s |
-| **SiliconFlow** (硅基流动) | Wan2.1-T2V-14B | $1 signup bonus | 720p |
-| **Vidu** (生数科技) | vidu-2.0 | 200 promo credits | 720p, 4s |
-| **MiniMax Hailuo** (海螺) | Hailuo 2.3 | Paid | Up to 1080P, 6-10s |
-| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP credits | 720p-1080p, 5-8s |
+### Video Providers
+
+| Provider | Model | Free Tier | Quality | Duration | Best for |
+|---|---|---|---|---|---|
+| **CogVideoX-Flash** (智谱) | cogvideox-flash | **Unlimited free** | 1440x960 | 6s | Getting started, free usage |
+| **DashScope / Wan** (通义万相) | wan2.6-t2v | 50s free (90 days) | Up to 1080P | 5-10s | High quality, Chinese content |
+| **Kling AI** (可灵) | kling-v2-master | 66 credits/day (web only) | 720p | 5-10s | Good quality, daily free credits |
+| **SiliconFlow** (硅基流动) | Wan2.1-T2V-14B | $1 signup bonus | 720p | varies | Quick testing |
+| **Vidu** (生数科技) | vidu-2.0 | 200 promo credits | 720p | 4s | Short clips |
+| **MiniMax Hailuo** (海螺) | Hailuo 2.3 | Paid | Up to 1080P | 6-10s | Highest quality |
+| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP credits | 720p-1080p | 5-8s | Production quality, GCP users |
+
+#### Provider selection guide
+
+```
+Need a video?
+  ├─ Free / just trying it out?
+  │   └─ cogvideo ✅ (unlimited free, no signup hassle)
+  │
+  ├─ Need highest quality?
+  │   ├─ minimax (best Chinese provider, paid)
+  │   └─ veo (best international, GCP credits)
+  │
+  ├─ Have GCP credits to spend?
+  │   ├─ Budget-conscious → veo-3.0-fast ($0.15/sec, 1080p)
+  │   └─ Best quality → veo-2.0 ($0.50/sec) or veo-3.0 ($0.75/sec)
+  │
+  └─ Need long videos (10s)?
+      ├─ dashscope / kling / minimax (support 10s)
+      └─ veo max 8s
+```
 
 ### Audio Providers (TTS & Music)
 
 | Provider | Capability | Model | Pricing |
 |---|---|---|---|
-| **MiniMax TTS** (海螺语音) | Text-to-Speech | speech-2.6-hd | Paid (~¥0.01/request) |
-| **MiniMax Music** (海螺音乐) | Music Generation | music-2.0 | Paid (~¥0.1/song) |
+| **MiniMax TTS** (海螺语音) | Text-to-Speech | speech-2.6-hd | ~¥0.01/request |
+| **MiniMax Music** (海螺音乐) | Music Generation | music-2.0 | ~¥0.1/song |
 
 > TTS and Music are automatically enabled when `MINIMAX_API_KEY` is configured — no additional setup needed.
 
-## Installation
+## Quick Start
 
-### Claude Code (Global)
+### 1. Clone & install
 
 ```bash
-claude mcp add -s user mcp-video-gen \
-  --env COGVIDEO_API_KEY=your_key \
-  --env DASHSCOPE_API_KEY=your_key \
-  --env KLING_ACCESS_KEY=your_ak \
-  --env KLING_SECRET_KEY=your_sk \
-  --env SILICONFLOW_API_KEY=your_key \
-  --env VIDU_API_KEY=your_key \
-  --env MINIMAX_API_KEY=your_key \
-  -- uv --directory /path/to/mcp-video-gen run video-gen
+git clone https://github.com/kevinten-ai/mcp-video-gen.git
+cd mcp-video-gen
+uv sync              # basic deps
+uv sync --extra gcp  # add this if using Google Veo
 ```
+
+### 2. Configure MCP
 
 Only configure the providers you want to use. At least one API key is required.
 
+<details>
+<summary><b>Claude Code (CLI) — recommended</b></summary>
+
+```bash
+# Minimal (free CogVideoX only)
+claude mcp add -s user mcp-video-gen \
+  --env COGVIDEO_API_KEY=your_key \
+  -- uv --directory /path/to/mcp-video-gen run video-gen
+
+# Full (all providers including Veo)
+claude mcp add -s user mcp-video-gen \
+  --env COGVIDEO_API_KEY=your_key \
+  --env KLING_ACCESS_KEY=your_ak \
+  --env KLING_SECRET_KEY=your_sk \
+  --env MINIMAX_API_KEY=your_key \
+  --env GCP_PROJECT_ID=your-project-id \
+  --env GEMINI_API_KEY=your_gcp_api_key \
+  -- uv --directory /path/to/mcp-video-gen run --extra gcp video-gen
+```
+
+> **Important:** `--extra gcp` must come after `run`, not before it. This is a `uv run` option, not a global `uv` option.
+
+</details>
+
+<details>
+<summary><b>Claude Desktop / Cursor (JSON config)</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "mcp-video-gen": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/mcp-video-gen", "run", "--extra", "gcp", "video-gen"],
+      "env": {
+        "COGVIDEO_API_KEY": "your_key",
+        "GCP_PROJECT_ID": "your-project-id",
+        "GEMINI_API_KEY": "your_gcp_api_key"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+### 3. Use it
+
+Ask your AI assistant to generate a video:
+
+```
+"Generate a video of a cat playing piano"
+```
+
+The assistant will call `generate_video`, wait, then call `query_video_status` to download the result.
+
+## Tools
+
+### Video
+- **generate_video** — Generate a video from a text prompt. Params: `prompt` (required), `provider` (optional), `duration` (5 or 10), `aspect_ratio` (16:9, 9:16, 1:1).
+- **query_video_status** — Check generation status and download the result. Params: `task_id` (required), `provider` (required).
+
+### Audio
+- **generate_speech** — Text-to-speech. Params: `text` (required), `voice_id` (optional: `female-shaonv`, `male-qn-qingse`, `cute_boy`, `Charming_Lady`), `speed` (0.5-2.0).
+- **generate_music** — AI music generation with optional lyrics. Params: `prompt` (required, 10-300 chars), `lyrics` (optional, supports `[Verse]`/`[Chorus]`/`[Bridge]` tags).
+
+### Utility
+- **list_providers** — Show all configured video, TTS, and music providers with descriptions.
+
 ## API Key Registration Guide
 
-### 1. CogVideoX-Flash (智谱清影) — Free Unlimited
+<details>
+<summary><b>1. CogVideoX-Flash (智谱清影) — Free Unlimited ✅ Recommended starting point</b></summary>
 
 | Item | Detail |
 |---|---|
@@ -69,138 +187,135 @@ Only configure the providers you want to use. At least one API key is required.
 | Env Var | `COGVIDEO_API_KEY` |
 
 **Steps:**
-1. Visit https://open.bigmodel.cn and click "注册" (Sign Up)
-2. Register with phone number (Chinese mobile) or email
-3. After login, go to **API Keys** page: https://open.bigmodel.cn/usercenter/apikeys
-4. Click "创建 API Key" to generate a new key
-5. Copy the key (format: `xxxxxxxx.xxxxxxxxxx`)
+1. Visit https://open.bigmodel.cn → "注册" (Sign Up)
+2. Register with phone number or email
+3. Go to **API Keys**: https://open.bigmodel.cn/usercenter/apikeys
+4. Click "创建 API Key" → copy (format: `xxxxxxxx.xxxxxxxxxx`)
 
-> Note: CogVideoX-Flash is a free model but may be overloaded during peak hours. If you get "访问量过大", try again later.
+> Note: May be overloaded during peak hours — retry if you get "访问量过大".
 
----
+</details>
 
-### 2. DashScope / Wan (阿里通义万相) — 50s Free
+<details>
+<summary><b>2. DashScope / Wan (通义万相) — 50s Free</b></summary>
 
 | Item | Detail |
 |---|---|
 | Platform | 阿里云百炼 (Alibaba Bailian) |
 | URL | https://bailian.console.aliyun.com |
-| Free Tier | **50 seconds free for new users (valid 90 days)** |
+| Free Tier | **50 seconds free (valid 90 days)** |
 | Env Var | `DASHSCOPE_API_KEY` |
 
 **Steps:**
-1. Visit https://www.aliyun.com and register an Alibaba Cloud account (supports phone/email)
-2. Go to https://bailian.console.aliyun.com
-3. Activate the DashScope service if prompted
-4. Navigate to **API-KEY 管理**: https://bailian.console.aliyun.com/?apiKey=1#/api-key
-5. Click "创建 API Key", select a workspace
-6. Copy the key (format: `sk-xxxxxxxxxxxxxxxx`)
+1. Register at https://www.aliyun.com (phone/email)
+2. Go to https://bailian.console.aliyun.com → activate DashScope
+3. **API-KEY 管理**: https://bailian.console.aliyun.com/?apiKey=1#/api-key
+4. Click "创建 API Key" → copy (format: `sk-xxxxxxxxxxxxxxxx`)
 
-> The free 50-second quota is auto-activated for new users. Check your remaining quota at the billing page.
+</details>
 
----
-
-### 3. Kling AI (可灵) — 66 Credits/Day
+<details>
+<summary><b>3. Kling AI (可灵) — 66 Credits/Day</b></summary>
 
 | Item | Detail |
 |---|---|
 | Platform | Kling AI Developer Platform |
 | URL | https://klingai.com/global/dev |
-| Free Tier | **66 credits/day on web UI; API requires purchased resource pack** |
+| Free Tier | **66 credits/day (web only); API requires purchased resource pack** |
 | Env Vars | `KLING_ACCESS_KEY`, `KLING_SECRET_KEY` |
 
 **Steps:**
-1. Visit https://klingai.com and sign up (email or phone)
-2. Go to Developer Console: https://app.klingai.com/global/dev/document-api/quickStart/userManual
-3. Navigate to **Settings** > **API Keys**
-4. Create an API key pair — you will get an **Access Key** (ak) and **Secret Key** (sk)
-5. Copy both keys
+1. Sign up at https://klingai.com
+2. Developer Console: https://app.klingai.com/global/dev/document-api/quickStart/userManual
+3. **Settings** > **API Keys** → create key pair (Access Key + Secret Key)
 
-> **Important:** The daily 66 free credits only work on the web UI, NOT via API. API calls require purchasing a resource pack. Cheapest standard 5s video costs ~2 credits.
+> **Important:** 66 daily credits are web-only, NOT for API. API requires purchasing a resource pack.
 
----
+</details>
 
-### 4. SiliconFlow (硅基流动) — $1 Signup Bonus
+<details>
+<summary><b>4. SiliconFlow (硅基流动) — $1 Signup Bonus</b></summary>
 
 | Item | Detail |
 |---|---|
 | Platform | SiliconFlow |
 | URL | https://siliconflow.cn |
-| Free Tier | **$1 registration bonus (~3 free videos at $0.29/video)** |
+| Free Tier | **$1 bonus (~3 videos at $0.29/video)** |
 | Env Var | `SILICONFLOW_API_KEY` |
 
 **Steps:**
-1. Visit https://cloud.siliconflow.cn/account/login and register (Chinese phone number)
-2. After login, go to **API Keys**: https://cloud.siliconflow.cn/account/ak
-3. Click "新建 API Key"
-4. Copy the key (format: `sk-xxxxxxxxxxxxxxxx`)
+1. Register at https://cloud.siliconflow.cn/account/login (Chinese phone)
+2. **API Keys**: https://cloud.siliconflow.cn/account/ak → "新建 API Key"
+3. Copy (format: `sk-xxxxxxxxxxxxxxxx`)
 
-> Registration bonus is one-time only. After it's spent, video generation costs ~$0.29/video (Wan2.1 model). Video result URLs expire in 10 minutes — download immediately.
+> Video download URLs expire in 10 minutes — the MCP server auto-downloads on query.
 
----
+</details>
 
-### 5. Vidu (生数科技) — Promotional Free Credits
+<details>
+<summary><b>5. Vidu (生数科技) — Promotional Credits</b></summary>
 
 | Item | Detail |
 |---|---|
 | Platform | Vidu Platform |
 | URL | https://platform.vidu.com |
-| Free Tier | **Apply for 200 free API credits (promotional, not guaranteed)** |
+| Free Tier | **Apply for 200 free API credits (promotional)** |
 | Env Var | `VIDU_API_KEY` |
 
 **Steps:**
-1. Visit https://www.vidu.com and sign up
-2. Go to API Platform: https://platform.vidu.com
-3. Navigate to **API Keys** and create a new key
-4. Copy the key
-5. Check if free credit promotion is active — apply for 200 free points if available
+1. Sign up at https://www.vidu.com → API Platform: https://platform.vidu.com
+2. Create API key → copy
 
-> API credits are separate from web UI credits (800/month on web do NOT apply to API). The 200 free credit promotion may not always be available.
+> API credits are separate from web credits (800/month web credits don't apply to API).
 
----
+</details>
 
-### 6. MiniMax Hailuo (海螺) — Paid
+<details>
+<summary><b>6. MiniMax Hailuo (海螺) — Paid (Best Quality)</b></summary>
 
 | Item | Detail |
 |---|---|
 | Platform | MiniMax Open Platform |
 | URL | https://platform.minimaxi.com |
-| Free Tier | **None for API. ~¥0.7/video (512P 6s) to ~¥3.7/video (1080P 6s)** |
-| Env Vars | `MINIMAX_API_KEY`, `MINIMAX_API_HOST` (default: `https://api.minimax.chat`) |
+| Free Tier | **None. ~¥0.7/video (512P 6s) to ~¥3.7/video (1080P 6s)** |
+| Env Vars | `MINIMAX_API_KEY`, `MINIMAX_API_HOST` (optional) |
 
 **Steps:**
-1. Visit https://platform.minimaxi.com and register (Chinese phone number)
-2. Complete real-name verification (实名认证) — required for API access
-3. Go to **API Keys** page and create a new key
-4. Copy the key (format: `sk-api-xxxxxxxxxxxxxxxx`)
-5. Top up your account at the billing center (minimum ~¥10)
+1. Register at https://platform.minimaxi.com (Chinese phone)
+2. Complete real-name verification (实名认证)
+3. Create API key (format: `sk-api-xxxxxxxxxxxxxxxx`)
+4. Top up at billing center (min ~¥10)
 
-> MiniMax API host defaults to `https://api.minimax.chat`. Hailuo 2.3 model delivers the best quality among all providers listed here.
+> Setting `MINIMAX_API_KEY` also enables TTS and music generation tools.
 
----
+</details>
 
-### 7. Google Veo (Vertex AI) — GCP Credits
+<details>
+<summary><b>7. Google Veo (Vertex AI) — GCP Credits</b></summary>
 
 | Item | Detail |
 |---|---|
 | Platform | Google Cloud Vertex AI |
 | URL | https://console.cloud.google.com |
-| Free Tier | **No free tier. Uses GCP credits/billing. ~$0.15-$0.75/second** |
-| Env Vars | `GCP_PROJECT_ID`, `GCP_REGION` (optional) |
+| Free Tier | **No free tier. Uses GCP credits/billing.** |
+| Env Vars | `GCP_PROJECT_ID`, `GEMINI_API_KEY` (recommended) |
 
-**Steps:**
-1. Create a GCP project with billing: https://console.cloud.google.com/projectcreate
+**Prerequisites:**
+1. GCP project with billing: https://console.cloud.google.com/projectcreate
 2. Enable Vertex AI API: https://console.cloud.google.com/apis/library/aiplatform.googleapis.com
-3. Install gcloud CLI and authenticate: `gcloud auth application-default login`
-4. Install with GCP support: `uv sync --extra gcp`
+3. GCP API Key: https://console.cloud.google.com/apis/credentials
 
 **Models:**
 
-| Model | Resolution | Pricing |
-|---|---|---|
-| `veo-2.0-generate-001` (default) | 720p | ~$0.50/sec |
-| `veo-3.0-generate-001` | 1080p | ~$0.75/sec |
-| `veo-3.0-fast-generate-001` | 1080p | ~$0.15/sec |
+| Model | Resolution | Pricing | Best for |
+|---|---|---|---|
+| `veo-2.0-generate-001` (default) | 720p | ~$0.50/sec | Stable, GA |
+| `veo-3.0-generate-001` | 1080p | ~$0.75/sec | Highest quality |
+| `veo-3.0-fast-generate-001` | 1080p | ~$0.15/sec | Cost-effective, recommended |
+
+**Auth options:**
+1. **GCP API Key** (recommended) — set `GEMINI_API_KEY=your_gcp_api_key`. Simplest setup, no extra deps.
+2. **OAuth2 / ADC** — run `gcloud auth application-default login`. Requires `--extra gcp` for `google-auth`.
 
 **Optional env vars:**
 
@@ -209,61 +324,80 @@ Only configure the providers you want to use. At least one API key is required.
 | `VEO_MODEL` | `veo-2.0-generate-001` | Model to use |
 | `VEO_GCS_BUCKET` | — | GCS bucket for output (omit for base64 inline) |
 | `GCP_REGION` | `us-central1` | Vertex AI region |
+| `GEMINI_API_KEY` | — | GCP API key (shared with mcp-image-gen) |
 
-> **Auth options:** Veo supports two authentication methods:
-> 1. **GCP API Key** (recommended) — set `GEMINI_API_KEY=your_gcp_api_key`. Simplest setup.
-> 2. **OAuth2 / ADC** — run `gcloud auth application-default login`. No API key needed. Requires `--extra gcp`.
->
-> Add `--extra gcp` to your uv command if using ADC.
+</details>
 
----
-
-## Environment Variables Summary
+## Environment Variables
 
 | Variable | Provider | Required |
 |---|---|---|
-| `COGVIDEO_API_KEY` | CogVideoX (智谱) | At least one |
-| `DASHSCOPE_API_KEY` | Wan / DashScope (阿里) | provider |
-| `KLING_ACCESS_KEY` | Kling AI (可灵) | must be |
-| `KLING_SECRET_KEY` | Kling AI (可灵) | configured |
+| `COGVIDEO_API_KEY` | CogVideoX (智谱) | At least one provider |
+| `DASHSCOPE_API_KEY` | Wan / DashScope (阿里) | must be configured |
+| `KLING_ACCESS_KEY` | Kling AI (可灵) | |
+| `KLING_SECRET_KEY` | Kling AI (可灵) | |
 | `SILICONFLOW_API_KEY` | SiliconFlow (硅基流动) | |
 | `VIDU_API_KEY` | Vidu (生数) | |
-| `MINIMAX_API_KEY` | MiniMax (海螺) | |
-| `MINIMAX_API_HOST` | MiniMax (海螺) | Optional, default: `https://api.minimax.chat` |
+| `MINIMAX_API_KEY` | MiniMax (海螺 + TTS + Music) | |
+| `MINIMAX_API_HOST` | MiniMax | Optional, default: `https://api.minimax.chat` |
 | `GCP_PROJECT_ID` | Google Veo | Required for Veo |
+| `GEMINI_API_KEY` | Google Veo | Recommended for Veo (or use ADC) |
 | `GCP_REGION` | Google Veo | Optional, default: `us-central1` |
 | `VEO_MODEL` | Google Veo | Optional, default: `veo-2.0-generate-001` |
 | `VEO_GCS_BUCKET` | Google Veo | Optional, GCS bucket for video output |
-| `VIDEO_OUTPUT_DIR` | Output path | Optional, default: `./output` |
+| `VIDEO_OUTPUT_DIR` | All providers | Optional, default: `./output` |
 
-## Tools
+## Troubleshooting
 
-### Video
-- **generate_video** — Generate a video from a text prompt. Specify `provider` to choose backend.
-- **query_video_status** — Check generation status and download the result.
+### Common Errors
 
-### Audio
-- **generate_speech** — Convert text to speech. Params: `text`, `voice_id` (optional), `speed` (0.5-2.0).
-- **generate_music** — Generate music from a style prompt with optional lyrics. Params: `prompt`, `lyrics` (optional, supports `[Verse]`/`[Chorus]` tags).
+| Error | Provider | Root Cause | Solution |
+|---|---|---|---|
+| `No providers configured` | All | No API keys set | Set at least one provider's API key in MCP env config |
+| `Unknown provider: xxx` | All | Typo or provider not configured | Check `list_providers` for available options |
+| `Still processing` | All | Video not ready yet | Normal — call `query_video_status` again in 30 seconds |
 
-### Utility
-- **list_providers** — Show all available video, TTS, and music providers.
+### Provider-Specific Errors
 
-## Architecture
+| Error | Provider | Solution |
+|---|---|---|
+| `访问量过大` (too many requests) | CogVideoX | Free model overloaded — wait and retry |
+| `JWT token error` | Kling | Check both `KLING_ACCESS_KEY` and `KLING_SECRET_KEY` are set |
+| `base_resp.status_code != 0` | MiniMax | Check API key, ensure account has balance |
+| `Auth failed: credentials not found` | Veo | Set `GEMINI_API_KEY` or run `gcloud auth application-default login` |
+| `429 quota exceeded` | Veo | Vertex AI rate limit (10 RPM). Wait 1 min or switch model via `VEO_MODEL` |
+| `Video blocked by safety filter` | Veo | Content flagged — rephrase prompt to avoid restricted content |
+
+### Veo-Specific Notes
+
+- **API Key vs ADC:** `GEMINI_API_KEY` is the simplest auth method. Same key works for both mcp-image-gen and mcp-video-gen.
+- **`--extra gcp` placement:** Must come after `run` in the uv command: `uv --directory /path run --extra gcp video-gen` (NOT `uv --directory /path --extra gcp run video-gen`)
+- **Base64 mode:** Without `VEO_GCS_BUCKET`, videos are returned as base64 in the API response and decoded locally. Works well for videos under 8s.
+- **Cost control:** Use `veo-3.0-fast-generate-001` ($0.15/sec) instead of default Veo 2 ($0.50/sec) for 70% savings with 1080p output.
+
+### Download Issues
+
+| Issue | Solution |
+|---|---|
+| `Auto-download failed` | Video URL may have expired. SiliconFlow URLs expire in 10 min. |
+| Video file is 0 bytes | Provider returned empty response. Retry generation. |
+| SSL verification errors | Server disables SSL verify for downloads (some providers use self-signed certs) |
+
+## Project Structure
 
 ```
 src/video_gen/
 ├── __init__.py
-├── server.py              # MCP server + tool definitions
+├── server.py              # MCP server + tool handlers
 ├── providers/
-│   ├── __init__.py        # BaseProvider + registry
+│   ├── __init__.py        # BaseProvider abstract class + registry
 │   ├── cogvideo.py        # 智谱 CogVideoX-Flash
 │   ├── dashscope.py       # 阿里 通义万相 Wan 2.6
-│   ├── kling.py           # 可灵 Kling AI
+│   ├── kling.py           # 可灵 Kling AI (JWT auth)
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow
 │   ├── vidu.py            # 生数 Vidu
 │   ├── minimax.py         # MiniMax 海螺
-│   └── veo.py             # Google Veo (Vertex AI)
+│   └── veo.py             # Google Veo (Vertex AI, API key + ADC)
 └── audio/
     ├── __init__.py        # BaseTTSProvider + BaseMusicProvider + registry
     ├── minimax_tts.py     # MiniMax TTS (speech-2.6-hd)
@@ -272,10 +406,30 @@ src/video_gen/
 
 ### Adding a New Provider
 
-1. Create a new file under `src/video_gen/providers/` or `src/video_gen/audio/`
-2. Implement the corresponding abstract base class (`BaseProvider`, `BaseTTSProvider`, or `BaseMusicProvider`)
-3. Register it in `server.py:_init_providers()` with an env var check
+1. Create `src/video_gen/providers/your_provider.py`
+2. Implement `BaseProvider` (properties: `name`, `description`, `free_tier_info`; methods: `generate()`, `query()`)
+3. Register in `server.py:_init_providers()` with env var check
+4. Provider appears automatically in `list_providers` and `generate_video` tool schema
+
+## Local Development
+
+```bash
+git clone https://github.com/kevinten-ai/mcp-video-gen.git
+cd mcp-video-gen
+uv sync --extra gcp  # all deps including google-auth
+
+# Run directly
+uv run video-gen
+
+# Debug with MCP Inspector
+npx @modelcontextprotocol/inspector uv --directory . run --extra gcp video-gen
+```
+
+## Related Projects
+
+- [mcp-image-gen](https://github.com/kevinten-ai/mcp-image-gen) — AI image generation MCP server (Gemini + Imagen)
+- [mcp-3d-gen](https://github.com/kevinten-ai/mcp-3d-gen) — AI 3D model generation MCP server
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.

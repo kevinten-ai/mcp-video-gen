@@ -5,12 +5,31 @@
 </p>
 
 <p align="center">
-  <strong>多平台 AI 视频、语音、音乐生成 MCP 服务器，专注于免费额度模型。</strong>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
+  <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
+  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version 1.1.0">
+</p>
+
+<p align="center">
+  <strong>多平台 AI 视频、语音、音乐生成 MCP 服务器。</strong><br>
+  7 个视频平台 + TTS + 音乐生成，统一接口。<br>
+  支持 Claude Code、Claude Desktop、Cursor 及所有 MCP 兼容客户端。
 </p>
 
 <p align="center">
   <a href="README.md">English</a>
 </p>
+
+## 特性
+
+- **7 个视频平台** — 智谱、通义万相、可灵、硅基流动、Vidu、海螺、Google Veo
+- **语音 & 音乐** — 文字转语音和 AI 音乐生成（MiniMax）
+- **免费优先** — CogVideoX 完全免费，无限量
+- **异步生成** — 提交 → 轮询 → 自动下载工作流
+- **灵活切换** — 通过 `provider` 参数每次请求选择最优平台
+- **自动下载** — 生成的视频/音频自动保存到本地
+- **GCP Veo 支持** — Vertex AI 高质量视频生成，API Key 或 ADC 认证
 
 ## 架构图
 
@@ -18,234 +37,187 @@
   <img src="docs/architecture.png" alt="架构图" width="800">
 </p>
 
+### 工作原理
+
+```
+用户提示词 → AI 助手（Claude / Cursor）→ MCP Server → 平台 API
+                                            ↓
+                                generate_video() → task_id
+                                query_video_status(task_id) → 下载到本地
+```
+
+所有视频平台都使用**异步模式**：提交生成请求，获取 task_id，然后轮询直到完成。MCP 服务器自动处理这个流程。
+
 ## 支持的平台
 
-| 平台 | 模型 | 免费额度 | 画质 |
-|---|---|---|---|
-| **智谱清影** CogVideoX-Flash | cogvideox-flash | 完全免费，无限量 | 1440x960, 6秒 |
-| **阿里通义万相** Wan 2.6 | wan2.6-t2v | 新用户50秒（90天有效） | 最高1080P, 5-10秒 |
-| **可灵** Kling AI | kling-v2-master | 网页端每天66积分 | 720p, 5-10秒 |
-| **硅基流动** SiliconFlow | Wan2.1-T2V-14B | 注册送$1（约3个视频） | 720p |
-| **生数科技** Vidu | vidu-2.0 | 申请200积分（促销） | 720p, 4秒 |
-| **MiniMax 海螺** Hailuo 2.3 | Hailuo 2.3 | 付费 | 最高1080P, 6-10秒 |
-| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP 赠金 | 720p-1080p, 5-8秒 |
+### 视频平台
+
+| 平台 | 模型 | 免费额度 | 画质 | 时长 | 适用场景 |
+|---|---|---|---|---|---|
+| **智谱清影** CogVideoX-Flash | cogvideox-flash | **完全免费** | 1440x960 | 6秒 | 入门、免费使用 |
+| **阿里通义万相** Wan 2.6 | wan2.6-t2v | 50秒（90天） | 最高1080P | 5-10秒 | 高质量、中文内容 |
+| **可灵** Kling AI | kling-v2-master | 每天66积分（网页端） | 720p | 5-10秒 | 画质好，每日免费 |
+| **硅基流动** SiliconFlow | Wan2.1-T2V-14B | 注册送$1 | 720p | 不定 | 快速测试 |
+| **生数科技** Vidu | vidu-2.0 | 200积分（促销） | 720p | 4秒 | 短视频 |
+| **MiniMax 海螺** Hailuo 2.3 | Hailuo 2.3 | 付费 | 最高1080P | 6-10秒 | 最高画质 |
+| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP 赠金 | 720p-1080p | 5-8秒 | 生产环境、GCP 用户 |
+
+#### 平台选择指南
+
+```
+需要生成视频？
+  ├─ 免费 / 初次尝试？
+  │   └─ cogvideo ✅（完全免费，无门槛）
+  │
+  ├─ 需要最高画质？
+  │   ├─ minimax（国内最好，付费）
+  │   └─ veo（国际最好，GCP 赠金）
+  │
+  ├─ 有 GCP 赠金？
+  │   ├─ 省钱 → veo-3.0-fast（$0.15/秒，1080p）
+  │   └─ 最佳画质 → veo-2.0（$0.50/秒）或 veo-3.0（$0.75/秒）
+  │
+  └─ 需要长视频（10秒）？
+      ├─ dashscope / kling / minimax（支持10秒）
+      └─ veo 最长8秒
+```
 
 ### 音频能力（语音合成 & 音乐生成）
 
 | 平台 | 能力 | 模型 | 价格 |
 |---|---|---|---|
-| **MiniMax 海螺语音** | 文字转语音 (TTS) | speech-2.6-hd | 付费（约 ¥0.01/次） |
-| **MiniMax 海螺音乐** | AI 音乐生成 | music-2.0 | 付费（约 ¥0.1/首） |
+| **MiniMax 海螺语音** | 文字转语音 (TTS) | speech-2.6-hd | 约 ¥0.01/次 |
+| **MiniMax 海螺音乐** | AI 音乐生成 | music-2.0 | 约 ¥0.1/首 |
 
-> 配置 `MINIMAX_API_KEY` 后，TTS 和音乐生成功能自动启用，无需额外配置。
+> 配置 `MINIMAX_API_KEY` 后，TTS 和音乐生成功能自动启用。
 
-## 安装
+## 快速开始
 
-### Claude Code 全局配置
+### 1. 克隆 & 安装
 
 ```bash
-claude mcp add -s user mcp-video-gen \
-  --env COGVIDEO_API_KEY=你的key \
-  --env DASHSCOPE_API_KEY=你的key \
-  --env KLING_ACCESS_KEY=你的ak \
-  --env KLING_SECRET_KEY=你的sk \
-  --env SILICONFLOW_API_KEY=你的key \
-  --env VIDU_API_KEY=你的key \
-  --env MINIMAX_API_KEY=你的key \
-  -- uv --directory /path/to/mcp-video-gen run video-gen
+git clone https://github.com/kevinten-ai/mcp-video-gen.git
+cd mcp-video-gen
+uv sync              # 基础依赖
+uv sync --extra gcp  # 使用 Google Veo 时加这个
 ```
+
+### 2. 配置 MCP
 
 只需配置你要使用的平台，至少配置一个。
 
-## API Key 注册指南
+<details>
+<summary><b>Claude Code（命令行）— 推荐</b></summary>
 
-### 1. 智谱清影 CogVideoX-Flash — 完全免费
+```bash
+# 最简（仅免费 CogVideoX）
+claude mcp add -s user mcp-video-gen \
+  --env COGVIDEO_API_KEY=你的key \
+  -- uv --directory /path/to/mcp-video-gen run video-gen
 
-| 项目 | 详情 |
-|---|---|
-| 平台 | 智谱 AI 开放平台 |
-| 地址 | https://open.bigmodel.cn |
-| 免费额度 | **完全免费，无每日限制** |
-| 环境变量 | `COGVIDEO_API_KEY` |
+# 完整（含 Veo）
+claude mcp add -s user mcp-video-gen \
+  --env COGVIDEO_API_KEY=你的key \
+  --env KLING_ACCESS_KEY=你的ak \
+  --env KLING_SECRET_KEY=你的sk \
+  --env MINIMAX_API_KEY=你的key \
+  --env GCP_PROJECT_ID=你的项目ID \
+  --env GEMINI_API_KEY=你的gcp_api_key \
+  -- uv --directory /path/to/mcp-video-gen run --extra gcp video-gen
+```
 
-**注册步骤：**
-1. 访问 https://open.bigmodel.cn ，点击"注册"
-2. 使用手机号或邮箱注册
-3. 登录后，进入 **API Keys** 页面：https://open.bigmodel.cn/usercenter/apikeys
-4. 点击"创建 API Key"
-5. 复制 Key（格式：`xxxxxxxx.xxxxxxxxxx`）
+> **重要：** `--extra gcp` 必须放在 `run` 后面，不能放在 `run` 前面。
 
-> 提示：CogVideoX-Flash 是免费模型，但高峰期可能提示"访问量过大"，稍后重试即可。
+</details>
 
----
+<details>
+<summary><b>Claude Desktop / Cursor（JSON 配置）</b></summary>
 
-### 2. 阿里通义万相 DashScope — 50秒免费
+```json
+{
+  "mcpServers": {
+    "mcp-video-gen": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/mcp-video-gen", "run", "--extra", "gcp", "video-gen"],
+      "env": {
+        "COGVIDEO_API_KEY": "你的key",
+        "GCP_PROJECT_ID": "你的项目ID",
+        "GEMINI_API_KEY": "你的gcp_api_key"
+      }
+    }
+  }
+}
+```
 
-| 项目 | 详情 |
-|---|---|
-| 平台 | 阿里云百炼 |
-| 地址 | https://bailian.console.aliyun.com |
-| 免费额度 | **新用户赠送50秒视频生成额度（90天有效）** |
-| 环境变量 | `DASHSCOPE_API_KEY` |
+</details>
 
-**注册步骤：**
-1. 访问 https://www.aliyun.com 注册阿里云账号（支持手机号/邮箱）
-2. 进入百炼平台：https://bailian.console.aliyun.com
-3. 如提示，开通 DashScope 服务
-4. 进入 **API-KEY 管理**：https://bailian.console.aliyun.com/?apiKey=1#/api-key
-5. 点击"创建 API Key"，选择工作空间
-6. 复制 Key（格式：`sk-xxxxxxxxxxxxxxxx`）
+### 3. 使用
 
-> 50秒免费额度在新用户开通时自动激活，可在计费页面查看剩余额度。
+直接告诉 AI 助手：
 
----
+```
+"生成一段猫弹钢琴的视频"
+```
 
-### 3. 可灵 Kling AI — 每天66积分
-
-| 项目 | 详情 |
-|---|---|
-| 平台 | Kling AI 开发者平台 |
-| 地址 | https://klingai.com/global/dev |
-| 免费额度 | **网页端每天66积分；API 需购买资源包** |
-| 环境变量 | `KLING_ACCESS_KEY`, `KLING_SECRET_KEY` |
-
-**注册步骤：**
-1. 访问 https://klingai.com 注册（邮箱或手机号）
-2. 进入开发者控制台：https://app.klingai.com/global/dev/document-api/quickStart/userManual
-3. 在 **设置** > **API Keys** 中创建密钥对
-4. 获得 **Access Key**（ak）和 **Secret Key**（sk）
-5. 复制两个 Key
-
-> **注意：** 每天66积分仅限网页端使用，API 调用需要单独购买资源包。标准模式5秒视频约消耗2积分。
-
----
-
-### 4. 硅基流动 SiliconFlow — 注册送$1
-
-| 项目 | 详情 |
-|---|---|
-| 平台 | 硅基流动 |
-| 地址 | https://siliconflow.cn |
-| 免费额度 | **注册赠送$1（约可生成3个视频，$0.29/个）** |
-| 环境变量 | `SILICONFLOW_API_KEY` |
-
-**注册步骤：**
-1. 访问 https://cloud.siliconflow.cn/account/login 注册（需中国手机号）
-2. 登录后进入 **API Keys**：https://cloud.siliconflow.cn/account/ak
-3. 点击"新建 API Key"
-4. 复制 Key（格式：`sk-xxxxxxxxxxxxxxxx`）
-
-> 注册赠送为一次性额度，用完后视频生成约$0.29/个。生成的视频下载链接10分钟后过期，请及时下载。
-
----
-
-### 5. 生数科技 Vidu — 促销送200积分
-
-| 项目 | 详情 |
-|---|---|
-| 平台 | Vidu 开放平台 |
-| 地址 | https://platform.vidu.com |
-| 免费额度 | **申请200免费 API 积分（促销活动，不保证常驻）** |
-| 环境变量 | `VIDU_API_KEY` |
-
-**注册步骤：**
-1. 访问 https://www.vidu.com 注册
-2. 进入 API 平台：https://platform.vidu.com
-3. 在 **API Keys** 页面创建新 Key
-4. 复制 Key
-5. 查看是否有免费积分促销活动，如有则申请200积分
-
-> API 积分与网页端积分独立（网页端每月800积分不适用于 API）。200积分促销活动可能随时结束。
-
----
-
-### 6. MiniMax 海螺 — 付费
-
-| 项目 | 详情 |
-|---|---|
-| 平台 | MiniMax 开放平台 |
-| 地址 | https://platform.minimaxi.com |
-| 免费额度 | **无免费额度。约 ¥0.7/视频 (512P 6秒) 至 ¥3.7/视频 (1080P 6秒)** |
-| 环境变量 | `MINIMAX_API_KEY`，`MINIMAX_API_HOST`（默认 `https://api.minimax.chat`） |
-
-**注册步骤：**
-1. 访问 https://platform.minimaxi.com 注册（需中国手机号）
-2. 完成实名认证（API 访问必须）
-3. 在 **API Keys** 页面创建新 Key
-4. 复制 Key（格式：`sk-api-xxxxxxxxxxxxxxxx`）
-5. 在充值中心充值（最低约 ¥10）
-
-> 海螺 2.3 模型在所有平台中画质最好。API Host 默认为 `https://api.minimax.chat`。
-
----
-
-### 7. Google Veo (Vertex AI) — GCP 赠金
-
-| 项目 | 详情 |
-|---|---|
-| 平台 | Google Cloud Vertex AI |
-| 地址 | https://console.cloud.google.com |
-| 免费额度 | **无免费额度。使用 GCP 赠金/计费。~$0.15-$0.75/秒** |
-| 环境变量 | `GCP_PROJECT_ID`，`GCP_REGION`（可选） |
-
-**配置步骤：**
-1. 创建 GCP 项目并启用计费：https://console.cloud.google.com/projectcreate
-2. 启用 Vertex AI API：https://console.cloud.google.com/apis/library/aiplatform.googleapis.com
-3. 安装 gcloud CLI 并认证：`gcloud auth application-default login`
-4. 安装 GCP 依赖：`uv sync --extra gcp`
-
-**可用模型：**
-
-| 模型 | 分辨率 | 价格 |
-|---|---|---|
-| `veo-2.0-generate-001`（默认） | 720p | ~$0.50/秒 |
-| `veo-3.0-generate-001` | 1080p | ~$0.75/秒 |
-| `veo-3.0-fast-generate-001` | 1080p | ~$0.15/秒 |
-
-**可选环境变量：**
-
-| 变量 | 默认值 | 说明 |
-|---|---|---|
-| `VEO_MODEL` | `veo-2.0-generate-001` | 使用的模型 |
-| `VEO_GCS_BUCKET` | — | 视频输出 GCS 存储桶（不设则用 base64 内联返回） |
-| `GCP_REGION` | `us-central1` | Vertex AI 区域 |
-
-> **认证方式：** Veo 支持两种认证：
-> 1. **GCP API Key**（推荐）— 设置 `GEMINI_API_KEY=你的gcp_api_key`，最简单
-> 2. **OAuth2 / ADC** — 运行 `gcloud auth application-default login`，无需 API Key，需加 `--extra gcp`
-
----
-
-## 环境变量汇总
-
-| 变量 | 平台 | 说明 |
-|---|---|---|
-| `COGVIDEO_API_KEY` | 智谱清影 | 至少 |
-| `DASHSCOPE_API_KEY` | 阿里通义万相 | 配置 |
-| `KLING_ACCESS_KEY` | 可灵 | 一个 |
-| `KLING_SECRET_KEY` | 可灵 | 平台 |
-| `SILICONFLOW_API_KEY` | 硅基流动 | |
-| `VIDU_API_KEY` | 生数 Vidu | |
-| `MINIMAX_API_KEY` | MiniMax 海螺 | |
-| `MINIMAX_API_HOST` | MiniMax 海螺 | 可选，默认 `https://api.minimax.chat` |
-| `GCP_PROJECT_ID` | Google Veo | Veo 必填 |
-| `GCP_REGION` | Google Veo | 可选，默认 `us-central1` |
-| `VEO_MODEL` | Google Veo | 可选，默认 `veo-2.0-generate-001` |
-| `VEO_GCS_BUCKET` | Google Veo | 可选，视频输出 GCS 存储桶 |
-| `VIDEO_OUTPUT_DIR` | 输出目录 | 可选，默认 `./output` |
+AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status` 下载结果。
 
 ## 工具说明
 
 ### 视频
-- **generate_video** — 根据文字描述生成视频。通过 `provider` 参数选择平台。
-- **query_video_status** — 查询视频生成状态，完成后自动下载。
+- **generate_video** — 根据文字描述生成视频。参数：`prompt`（必填）、`provider`（可选）、`duration`（5或10）、`aspect_ratio`（16:9、9:16、1:1）
+- **query_video_status** — 查询状态并下载。参数：`task_id`（必填）、`provider`（必填）
 
 ### 音频
-- **generate_speech** — 文字转语音。参数：`text`（文本）、`voice_id`（可选，声音ID）、`speed`（0.5-2.0，语速）。
-- **generate_music** — 根据风格描述生成音乐，支持歌词。参数：`prompt`（风格描述）、`lyrics`（可选，支持 `[Verse]`/`[Chorus]` 结构标签）。
+- **generate_speech** — 文字转语音。参数：`text`（必填）、`voice_id`（可选：`female-shaonv`、`male-qn-qingse`、`cute_boy`）、`speed`（0.5-2.0）
+- **generate_music** — AI 音乐生成。参数：`prompt`（必填，10-300字）、`lyrics`（可选，支持 `[Verse]`/`[Chorus]`/`[Bridge]`）
 
 ### 工具
-- **list_providers** — 列出所有可用的视频、语音、音乐平台。
+- **list_providers** — 列出所有已配置的视频、语音、音乐平台
+
+## 环境变量
+
+| 变量 | 平台 | 说明 |
+|---|---|---|
+| `COGVIDEO_API_KEY` | 智谱清影 | 至少配置 |
+| `DASHSCOPE_API_KEY` | 阿里通义万相 | 一个平台 |
+| `KLING_ACCESS_KEY` | 可灵 | |
+| `KLING_SECRET_KEY` | 可灵 | |
+| `SILICONFLOW_API_KEY` | 硅基流动 | |
+| `VIDU_API_KEY` | 生数 Vidu | |
+| `MINIMAX_API_KEY` | MiniMax 海螺 + TTS + 音乐 | |
+| `MINIMAX_API_HOST` | MiniMax | 可选，默认 `https://api.minimax.chat` |
+| `GCP_PROJECT_ID` | Google Veo | Veo 必填 |
+| `GEMINI_API_KEY` | Google Veo | 推荐（或用 ADC） |
+| `GCP_REGION` | Google Veo | 可选，默认 `us-central1` |
+| `VEO_MODEL` | Google Veo | 可选，默认 `veo-2.0-generate-001` |
+| `VEO_GCS_BUCKET` | Google Veo | 可选，GCS 存储桶 |
+| `VIDEO_OUTPUT_DIR` | 输出目录 | 可选，默认 `./output` |
+
+## 常见问题排查
+
+### 通用错误
+
+| 错误 | 根因 | 解决方案 |
+|---|---|---|
+| `No providers configured` | 没设置任何 API Key | 至少设置一个平台的 API Key |
+| `Unknown provider` | 拼写错误或平台未配置 | 用 `list_providers` 查看可用选项 |
+| `Still processing` | 视频还在生成 | 正常 — 30秒后再查询 |
+
+### 平台特定错误
+
+| 错误 | 平台 | 解决方案 |
+|---|---|---|
+| `访问量过大` | 智谱 | 免费模型高峰期过载，稍后重试 |
+| `JWT token error` | 可灵 | 检查 `KLING_ACCESS_KEY` 和 `KLING_SECRET_KEY` 都已设置 |
+| `Auth failed: credentials not found` | Veo | 设置 `GEMINI_API_KEY` 或运行 `gcloud auth application-default login` |
+| `429 quota exceeded` | Veo | Vertex AI 速率限制（10 RPM），等1分钟或换模型 |
+| `Video blocked by safety filter` | Veo | 内容被安全过滤，修改提示词避免敏感内容 |
+
+### Veo 特别说明
+
+- **API Key vs ADC**：`GEMINI_API_KEY` 最简单，同一个 key 可以同时用于 mcp-image-gen 和 mcp-video-gen
+- **`--extra gcp` 位置**：必须放在 `run` 后面：`uv --directory /path run --extra gcp video-gen`
+- **省钱建议**：用 `veo-3.0-fast-generate-001`（$0.15/秒）替代默认 Veo 2（$0.50/秒），节省 70% 且输出 1080p
 
 ## 项目结构
 
@@ -257,11 +229,11 @@ src/video_gen/
 │   ├── __init__.py        # Provider 基类 + 注册机制
 │   ├── cogvideo.py        # 智谱 CogVideoX-Flash
 │   ├── dashscope.py       # 阿里 通义万相 Wan 2.6
-│   ├── kling.py           # 可灵 Kling AI
+│   ├── kling.py           # 可灵 Kling AI (JWT 认证)
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow
 │   ├── vidu.py            # 生数 Vidu
 │   ├── minimax.py         # MiniMax 海螺
-│   └── veo.py             # Google Veo (Vertex AI)
+│   └── veo.py             # Google Veo (Vertex AI, API Key + ADC)
 └── audio/
     ├── __init__.py        # TTS/音乐 基类 + 注册机制
     ├── minimax_tts.py     # MiniMax 语音合成 (speech-2.6-hd)
@@ -270,10 +242,30 @@ src/video_gen/
 
 ### 添加新平台
 
-1. 在 `src/video_gen/providers/` 或 `src/video_gen/audio/` 下创建新文件
-2. 实现对应的抽象基类（`BaseProvider`、`BaseTTSProvider` 或 `BaseMusicProvider`）
+1. 创建 `src/video_gen/providers/your_provider.py`
+2. 实现 `BaseProvider`（属性：`name`、`description`、`free_tier_info`；方法：`generate()`、`query()`）
 3. 在 `server.py:_init_providers()` 中注册，通过环境变量控制启用
+4. 新平台自动出现在 `list_providers` 和 `generate_video` 工具中
+
+## 本地开发
+
+```bash
+git clone https://github.com/kevinten-ai/mcp-video-gen.git
+cd mcp-video-gen
+uv sync --extra gcp  # 全部依赖
+
+# 直接运行
+uv run video-gen
+
+# MCP Inspector 调试
+npx @modelcontextprotocol/inspector uv --directory . run --extra gcp video-gen
+```
+
+## 相关项目
+
+- [mcp-image-gen](https://github.com/kevinten-ai/mcp-image-gen) — AI 图片生成 MCP 服务器（Gemini + Imagen）
+- [mcp-3d-gen](https://github.com/kevinten-ai/mcp-3d-gen) — AI 3D 模型生成 MCP 服务器
 
 ## 许可证
 
-MIT
+MIT — 详见 [LICENSE](LICENSE)。
