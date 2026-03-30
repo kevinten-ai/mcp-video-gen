@@ -38,15 +38,11 @@ def _get_api_key() -> str:
 def _get_auth() -> tuple[str, dict[str, str]]:
     """Build authenticated URL and headers for Cloud TTS.
 
-    Uses x-goog-api-key header for API key auth (the ?key= query param
-    returns 401 for this API, but the header works).
-    Falls back to ADC OAuth2 if no API key is set.
+    Cloud TTS does NOT support Vertex AI API keys (AQ.xxx format).
+    Only ADC (OAuth2) works. Raises ValueError if ADC is unavailable.
     """
-    api_key = _get_api_key()
     url = "https://texttospeech.googleapis.com/v1/text:synthesize"
-    if api_key:
-        return url, {"Content-Type": "application/json", "x-goog-api-key": api_key}
-    # ADC fallback
+    # Cloud TTS requires OAuth2 — API keys are rejected
     import google.auth
     import google.auth.transport.requests
     credentials, _ = google.auth.default(

@@ -95,13 +95,20 @@ def _init_providers() -> None:
         register_tts(MiniMaxTTSProvider(minimax_key, minimax_host))
         register_music(MiniMaxMusicProvider(minimax_key, minimax_host))
 
-    # Google audio providers (Lyria + TTS) — same GCP credentials as Veo
+    # Google Lyria (music) — works with Vertex AI API key
     if gcp_project and (gcp_api_key or GoogleLyriaProvider is not None):
         gcp_region = os.getenv("GCP_REGION", "us-central1")
         if GoogleLyriaProvider is not None:
             register_music(GoogleLyriaProvider(gcp_project, gcp_region))
-        if GoogleTTSProvider is not None:
+
+    # Google TTS — requires ADC (OAuth2), does NOT work with API keys
+    if GoogleTTSProvider is not None:
+        try:
+            import google.auth
+            google.auth.default()
             register_tts(GoogleTTSProvider())
+        except Exception:
+            pass  # ADC not configured, skip Google TTS
 
 
 _init_providers()

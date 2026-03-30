@@ -86,9 +86,10 @@ class GoogleLyriaProvider(BaseMusicProvider):
             if not predictions:
                 return AudioResult(status="failed", error="No audio in response")
 
-            audio_b64 = predictions[0].get("audioContent", "")
+            # Vertex AI predict API uses "bytesBase64Encoded" (same as Imagen)
+            audio_b64 = predictions[0].get("bytesBase64Encoded", "") or predictions[0].get("audioContent", "")
             if not audio_b64:
-                return AudioResult(status="failed", error="Empty audioContent")
+                return AudioResult(status="failed", error="Empty audio response")
 
             audio_bytes = base64.b64decode(audio_b64)
             return AudioResult(status="success", audio_data=audio_bytes)
