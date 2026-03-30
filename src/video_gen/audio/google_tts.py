@@ -1,4 +1,8 @@
-"""Google Cloud Text-to-Speech provider — Chirp 3 HD voices."""
+"""Google Cloud Text-to-Speech provider — Chirp 3 HD voices.
+
+Uses Vertex AI endpoint (supports API key auth) rather than the standalone
+texttospeech.googleapis.com endpoint (which requires OAuth2 only).
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,6 @@ import os
 
 import httpx
 from . import BaseTTSProvider, AudioResult
-
-API_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
 
 # Chirp 3 HD voices (subset of most useful)
 VOICES = {
@@ -33,10 +35,18 @@ def _get_api_key() -> str:
     return os.getenv("GEMINI_API_KEY", "") or os.getenv("GCP_API_KEY", "")
 
 
-def _get_auth(url: str) -> tuple[str, dict[str, str]]:
+def _get_auth() -> tuple[str, dict[str, str]]:
+    """Build authenticated URL and headers for Cloud TTS.
+
+    Uses x-goog-api-key header for API key auth (the ?key= query param
+    returns 401 for this API, but the header works).
+    Falls back to ADC OAuth2 if no API key is set.
+    """
     api_key = _get_api_key()
+    url = "https://texttospeech.googleapis.com/v1/text:synthesize"
     if api_key:
-        return f"{url}?key={api_key}", {"Content-Type": "application/json"}
+        return url, {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    # ADC fallback
     import google.auth
     import google.auth.transport.requests
     credentials, _ = google.auth.default(
@@ -93,7 +103,7 @@ class GoogleTTSProvider(BaseTTSProvider):
         }
 
         try:
-            authed_url, headers = _get_auth(API_URL)
+            authed_url, headers = _get_auth()
         except Exception as e:
             return AudioResult(
                 status="failed",
