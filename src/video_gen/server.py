@@ -40,9 +40,11 @@ from .audio.minimax_music import MiniMaxMusicProvider
 try:
     from .audio.google_lyria import GoogleLyriaProvider
     from .audio.google_tts import GoogleTTSProvider
+    from .audio.google_stt import transcribe as google_transcribe
 except ImportError:
     GoogleLyriaProvider = None
     GoogleTTSProvider = None
+    google_transcribe = None
 
 VIDEO_OUTPUT_DIR = os.getenv("VIDEO_OUTPUT_DIR", os.path.join(os.getcwd(), "output"))
 
@@ -302,6 +304,30 @@ async def handle_list_tools() -> list[types.Tool]:
             },
         ))
 
+    # STT tool (transcribe audio to text)
+    gcp_project = os.getenv("GCP_PROJECT_ID", "")
+    gcp_api_key = os.getenv("GEMINI_API_KEY", "") or os.getenv("GCP_API_KEY", "")
+    if (gcp_project or gcp_api_key) and google_transcribe is not None:
+        tools.append(types.Tool(
+            name="transcribe_audio",
+            description="Transcribe audio/video file to text with word-level timestamps using Google Chirp 2. Supports: mp3, wav, flac, ogg. Use for subtitle generation.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "audio_path": {
+                        "type": "string",
+                        "description": "Path to audio or video file to transcribe",
+                    },
+                    "language_code": {
+                        "type": "string",
+                        "description": "Language code (e.g. en-US, cmn-CN, ja-JP). Default: en-US",
+                        "default": "en-US",
+                    },
+                },
+                "required": ["audio_path"],
+            },
+        ))
+
     return tools
 
 
@@ -470,6 +496,33 @@ async def handle_call_tool(
             results.append(types.TextContent(type="text", text=f"Saved to: {filepath}"))
 
         return results or [types.TextContent(type="text", text="No music generated")]
+
+    if name == "transcribe_audio":
+        audio_path = arguments.get("audio_path")
+        if not audio_path:
+            return [types.TextContent(type="text", text="Missing audio_path")]
+
+        if google_transcribe is None:
+            return [types.TextContent(type="text", text="STT not available. Install --extra gcp.")]
+
+        language_code = arguments.get("language_code", "en-US")
+        result = await google_transcribe(audio_path, language_code=language_code)
+
+        if result["error"]:
+            return [types.TextContent(type="text", text=f"Transcription failed: {result['error']}")]
+
+        lines = [f"**Transcript:**\n{result['transcript']}"]
+        if result["words"]:
+            lines.append(f"\n**Words ({len(result['words'])} total, with timestamps):**")
+            # Show first/last few words as preview
+            words = result["words"]
+            preview = words[:5]
+            for w in preview:
+                lines.append(f"  [{w['start']:.1f}s-{w['end']:.1f}s] {w['word']}")
+            if len(words) > 5:
+                lines.append(f"  ... ({len(words) - 5} more words)")
+
+        return [types.TextContent(type="text", text="\n".join(lines))]
 
     return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
 
