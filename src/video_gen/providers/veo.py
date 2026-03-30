@@ -19,6 +19,7 @@ MODELS = {
 
 DEFAULT_MODEL = os.getenv("VEO_MODEL", "veo-2.0-generate-001")
 GCS_BUCKET = os.getenv("VEO_GCS_BUCKET", "")
+GCP_API_KEY = os.getenv("GEMINI_API_KEY", "") or os.getenv("GCP_API_KEY", "")
 
 
 def _get_access_token() -> str:
@@ -31,6 +32,14 @@ def _get_access_token() -> str:
     )
     credentials.refresh(google.auth.transport.requests.Request())
     return credentials.token
+
+
+def _get_auth(url: str) -> tuple[str, dict[str, str]]:
+    """Get authenticated URL and headers. Prefers API key, falls back to ADC."""
+    if GCP_API_KEY:
+        return f"{url}?key={GCP_API_KEY}", {"Content-Type": "application/json"}
+    token = _get_access_token()
+    return url, {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
 class VeoProvider(BaseProvider):
@@ -83,20 +92,17 @@ class VeoProvider(BaseProvider):
         }
 
         try:
-            token = _get_access_token()
+            authed_url, headers = _get_auth(url)
         except Exception as e:
             return VideoResult(
                 task_id="", status="failed",
-                error=f"Auth failed: {e}. Run: gcloud auth application-default login",
+                error=f"Auth failed: {e}. Set GEMINI_API_KEY or run: gcloud auth application-default login",
             )
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                url,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
+                authed_url,
+                headers=headers,
                 json=body,
                 timeout=60.0,
             )
@@ -130,7 +136,7 @@ class VeoProvider(BaseProvider):
         url = f"{self._base_url(model)}:fetchPredictOperation"
 
         try:
-            token = _get_access_token()
+            authed_url, headers = _get_auth(url)
         except Exception as e:
             return VideoResult(
                 task_id=task_id, status="failed",
@@ -139,11 +145,8 @@ class VeoProvider(BaseProvider):
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                url,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
+                authed_url,
+                headers=headers,
                 json={"operationName": task_id},
                 timeout=60.0,
             )

@@ -71,11 +71,17 @@ def _init_providers() -> None:
     if vidu_key:
         register_provider(ViduProvider(vidu_key))
 
-    # Veo (Google Vertex AI) — requires google-auth
+    # Veo (Google Vertex AI) — API key or ADC auth
     gcp_project = os.getenv("GCP_PROJECT_ID", "")
-    if gcp_project and VeoProvider is not None:
+    gcp_api_key = os.getenv("GEMINI_API_KEY", "") or os.getenv("GCP_API_KEY", "")
+    if gcp_project and (gcp_api_key or VeoProvider is not None):
         gcp_region = os.getenv("GCP_REGION", "us-central1")
-        register_provider(VeoProvider(gcp_project, gcp_region))
+        # VeoProvider handles auth internally (API key preferred, ADC fallback)
+        try:
+            from .providers.veo import VeoProvider as _Veo
+            register_provider(_Veo(gcp_project, gcp_region))
+        except ImportError:
+            pass  # google-auth not installed and no API key fallback possible
 
     # Audio providers (TTS + Music)
     if minimax_key:
