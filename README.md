@@ -8,12 +8,12 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
-  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version 1.1.0">
+  <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version 1.2.0">
 </p>
 
 <p align="center">
-  <strong>Multi-provider AI video, speech & music generation MCP server.</strong><br>
-  7 video providers, TTS, music generation — one unified interface.<br>
+  <strong>Multi-provider AI video, speech, music & transcription MCP server.</strong><br>
+  7 video providers + image-to-video + TTS + music + STT — one unified interface.<br>
   Works with Claude Code, Claude Desktop, Cursor, and any MCP-compatible client.
 </p>
 
@@ -23,13 +23,14 @@
 
 ## Features
 
-- **7 video providers** — CogVideoX, DashScope/Wan, Kling, SiliconFlow, Vidu, MiniMax, Google Veo
-- **TTS & music** — text-to-speech and AI music generation via MiniMax
+- **7 video providers** — CogVideoX, DashScope/Wan, Kling, SiliconFlow, Vidu, MiniMax, Google Veo (2/3/3.1)
+- **Image-to-video** — generate videos from reference images (Veo)
+- **TTS** — text-to-speech via MiniMax (+ Google Chirp 3 HD with ADC)
+- **Music generation** — MiniMax Music + **Google Lyria** (instrumental, ~33s, GCP credits)
+- **Speech-to-text** — transcribe audio with word-level timestamps via Google Chirp 2 (for subtitle generation)
 - **Free-tier focused** — CogVideoX is completely free with unlimited usage
-- **Async generation** — submit → poll → auto-download workflow
 - **Provider switching** — choose the best provider per request via `provider` parameter
 - **Auto-download** — generated videos/audio saved to local disk automatically
-- **GCP Veo support** — high-quality Vertex AI video generation with API key or ADC auth
 
 ## Architecture
 
@@ -60,7 +61,7 @@ All video providers use an **async pattern**: submit a generation request, get a
 | **SiliconFlow** (硅基流动) | Wan2.1-T2V-14B | $1 signup bonus | 720p | varies | Quick testing |
 | **Vidu** (生数科技) | vidu-2.0 | 200 promo credits | 720p | 4s | Short clips |
 | **MiniMax Hailuo** (海螺) | Hailuo 2.3 | Paid | Up to 1080P | 6-10s | Highest quality |
-| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP credits | 720p-1080p | 5-8s | Production quality, GCP users |
+| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.1 | GCP credits | 720p-4K | 5-8s | Production quality, GCP users |
 
 #### Provider selection guide
 
@@ -82,14 +83,24 @@ Need a video?
       └─ veo max 8s
 ```
 
-### Audio Providers (TTS & Music)
+### Audio Providers
 
-| Provider | Capability | Model | Pricing |
-|---|---|---|---|
-| **MiniMax TTS** (海螺语音) | Text-to-Speech | speech-2.6-hd | ~¥0.01/request |
-| **MiniMax Music** (海螺音乐) | Music Generation | music-2.0 | ~¥0.1/song |
+| Provider | Capability | Model | Pricing | Env Var |
+|---|---|---|---|---|
+| **MiniMax TTS** | Text-to-Speech | speech-2.6-hd | ~¥0.01/req | `MINIMAX_API_KEY` |
+| **Google TTS** | Text-to-Speech | Chirp 3 HD (52 languages) | ~$30/1M chars | ADC only |
+| **MiniMax Music** | Music Generation (with lyrics) | music-2.0 | ~¥0.1/song | `MINIMAX_API_KEY` |
+| **Google Lyria** | Instrumental Music | lyria-002 (~33s WAV) | ~$0.06/clip | `GCP_PROJECT_ID` |
 
-> TTS and Music are automatically enabled when `MINIMAX_API_KEY` is configured — no additional setup needed.
+### Transcription
+
+| Provider | Capability | Model | Pricing | Env Var |
+|---|---|---|---|---|
+| **Google STT** | Speech-to-Text + timestamps | Chirp 2 | ~$0.016/min | `GCP_PROJECT_ID` |
+
+> - MiniMax tools auto-enable when `MINIMAX_API_KEY` is set
+> - Google Lyria and STT auto-enable when `GCP_PROJECT_ID` is set (uses `GEMINI_API_KEY`)
+> - Google TTS requires ADC (`gcloud auth application-default login`)
 
 ## Quick Start
 
@@ -161,18 +172,21 @@ Ask your AI assistant to generate a video:
 
 The assistant will call `generate_video`, wait, then call `query_video_status` to download the result.
 
-## Tools
+## Tools (7 total)
 
 ### Video
-- **generate_video** — Generate a video from a text prompt. Params: `prompt` (required), `provider` (optional), `duration` (5 or 10), `aspect_ratio` (16:9, 9:16, 1:1).
-- **query_video_status** — Check generation status and download the result. Params: `task_id` (required), `provider` (required).
+- **generate_video** — Text-to-video or image-to-video generation. Params: `prompt`, `provider`, `duration` (5/10), `aspect_ratio` (16:9/9:16/1:1), `image_url` (for img2vid, Veo only).
+- **query_video_status** — Poll generation status and auto-download. Params: `task_id`, `provider`.
 
 ### Audio
-- **generate_speech** — Text-to-speech. Params: `text` (required), `voice_id` (optional: `female-shaonv`, `male-qn-qingse`, `cute_boy`, `Charming_Lady`), `speed` (0.5-2.0).
-- **generate_music** — AI music generation with optional lyrics. Params: `prompt` (required, 10-300 chars), `lyrics` (optional, supports `[Verse]`/`[Chorus]`/`[Bridge]` tags).
+- **generate_speech** — Text-to-speech. Params: `text`, `provider` (minimax/google-tts), `voice_id`, `speed` (0.5-2.0).
+- **generate_music** — AI music generation. Params: `prompt`, `provider` (minimax/google-lyria), `lyrics` (optional, supports `[Verse]`/`[Chorus]`/`[Bridge]`).
+
+### Transcription
+- **transcribe_audio** — Speech-to-text with word-level timestamps (Google Chirp 2). Params: `audio_path`, `language_code` (en-US/cmn-CN/ja-JP/...). Use with `ffmpeg add_subtitles` for full subtitle pipeline.
 
 ### Utility
-- **list_providers** — Show all configured video, TTS, and music providers with descriptions.
+- **list_providers** — Show all configured video, TTS, music, and STT providers.
 
 ## API Key Registration Guide
 
@@ -310,8 +324,10 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 | Model | Resolution | Pricing | Best for |
 |---|---|---|---|
 | `veo-2.0-generate-001` (default) | 720p | ~$0.50/sec | Stable, GA |
-| `veo-3.0-generate-001` | 1080p | ~$0.75/sec | Highest quality |
-| `veo-3.0-fast-generate-001` | 1080p | ~$0.15/sec | Cost-effective, recommended |
+| `veo-3.0-generate-001` | 1080p | ~$0.75/sec | High quality |
+| `veo-3.0-fast-generate-001` | 1080p | ~$0.15/sec | Cost-effective |
+| `veo-3.1-generate-001` | **4K** | ~$0.75/sec | Highest quality |
+| `veo-3.1-fast-generate-001` | 1080p | ~$0.10/sec | **Best value** ✅ |
 
 **Auth options:**
 1. **GCP API Key** (recommended) — set `GEMINI_API_KEY=your_gcp_api_key`. Simplest setup, no extra deps.
@@ -401,7 +417,10 @@ src/video_gen/
 └── audio/
     ├── __init__.py        # BaseTTSProvider + BaseMusicProvider + registry
     ├── minimax_tts.py     # MiniMax TTS (speech-2.6-hd)
-    └── minimax_music.py   # MiniMax Music (music-2.0)
+    ├── minimax_music.py   # MiniMax Music (music-2.0)
+    ├── google_lyria.py    # Google Lyria 2 instrumental music (Vertex AI)
+    ├── google_tts.py      # Google Cloud TTS Chirp 3 HD (ADC only)
+    └── google_stt.py      # Google Cloud STT Chirp 2 (transcription)
 ```
 
 ### Adding a New Provider

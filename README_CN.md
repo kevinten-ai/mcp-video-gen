@@ -8,12 +8,12 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
-  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version 1.1.0">
+  <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version 1.2.0">
 </p>
 
 <p align="center">
-  <strong>多平台 AI 视频、语音、音乐生成 MCP 服务器。</strong><br>
-  7 个视频平台 + TTS + 音乐生成，统一接口。<br>
+  <strong>多平台 AI 视频、语音、音乐、转录 MCP 服务器。</strong><br>
+  7 个视频平台 + 图生视频 + TTS + 音乐 + 语音转文字，统一接口。<br>
   支持 Claude Code、Claude Desktop、Cursor 及所有 MCP 兼容客户端。
 </p>
 
@@ -23,13 +23,14 @@
 
 ## 特性
 
-- **7 个视频平台** — 智谱、通义万相、可灵、硅基流动、Vidu、海螺、Google Veo
-- **语音 & 音乐** — 文字转语音和 AI 音乐生成（MiniMax）
+- **7 个视频平台** — 智谱、通义万相、可灵、硅基流动、Vidu、海螺、Google Veo (2/3/3.1)
+- **图生视频** — 从参考图片生成视频（Veo）
+- **语音合成** — MiniMax TTS（+ Google Chirp 3 HD 需 ADC）
+- **音乐生成** — MiniMax Music + **Google Lyria**（纯器乐，~33秒，GCP 赠金）
+- **语音转文字** — Google Chirp 2 转录 + 词级时间戳（字幕生成）
 - **免费优先** — CogVideoX 完全免费，无限量
-- **异步生成** — 提交 → 轮询 → 自动下载工作流
 - **灵活切换** — 通过 `provider` 参数每次请求选择最优平台
 - **自动下载** — 生成的视频/音频自动保存到本地
-- **GCP Veo 支持** — Vertex AI 高质量视频生成，API Key 或 ADC 认证
 
 ## 架构图
 
@@ -60,7 +61,7 @@
 | **硅基流动** SiliconFlow | Wan2.1-T2V-14B | 注册送$1 | 720p | 不定 | 快速测试 |
 | **生数科技** Vidu | vidu-2.0 | 200积分（促销） | 720p | 4秒 | 短视频 |
 | **MiniMax 海螺** Hailuo 2.3 | Hailuo 2.3 | 付费 | 最高1080P | 6-10秒 | 最高画质 |
-| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.0-fast | GCP 赠金 | 720p-1080p | 5-8秒 | 生产环境、GCP 用户 |
+| **Google Veo** (Vertex AI) | veo-2.0/3.0/3.1 | GCP 赠金 | 720p-4K | 5-8秒 | 生产环境、GCP 用户 |
 
 #### 平台选择指南
 
@@ -82,14 +83,24 @@
       └─ veo 最长8秒
 ```
 
-### 音频能力（语音合成 & 音乐生成）
+### 音频能力
 
-| 平台 | 能力 | 模型 | 价格 |
-|---|---|---|---|
-| **MiniMax 海螺语音** | 文字转语音 (TTS) | speech-2.6-hd | 约 ¥0.01/次 |
-| **MiniMax 海螺音乐** | AI 音乐生成 | music-2.0 | 约 ¥0.1/首 |
+| 平台 | 能力 | 模型 | 价格 | 环境变量 |
+|---|---|---|---|---|
+| **MiniMax 海螺语音** | 文字转语音 | speech-2.6-hd | 约 ¥0.01/次 | `MINIMAX_API_KEY` |
+| **Google TTS** | 文字转语音 | Chirp 3 HD（52语言） | ~$30/1M字符 | 需 ADC |
+| **MiniMax 海螺音乐** | AI 音乐生成（含歌词） | music-2.0 | 约 ¥0.1/首 | `MINIMAX_API_KEY` |
+| **Google Lyria** | 纯器乐生成 | lyria-002（~33秒 WAV） | ~$0.06/首 | `GCP_PROJECT_ID` |
 
-> 配置 `MINIMAX_API_KEY` 后，TTS 和音乐生成功能自动启用。
+### 转录能力
+
+| 平台 | 能力 | 模型 | 价格 | 环境变量 |
+|---|---|---|---|---|
+| **Google STT** | 语音转文字 + 时间戳 | Chirp 2 | ~$0.016/分钟 | `GCP_PROJECT_ID` |
+
+> - 配置 `MINIMAX_API_KEY` 自动启用 MiniMax 语音和音乐
+> - 配置 `GCP_PROJECT_ID` 自动启用 Lyria 音乐和 STT 转录
+> - Google TTS 需要 ADC 认证（`gcloud auth application-default login`）
 
 ## 快速开始
 
@@ -161,18 +172,21 @@ claude mcp add -s user mcp-video-gen \
 
 AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status` 下载结果。
 
-## 工具说明
+## 工具说明（共 7 个）
 
 ### 视频
-- **generate_video** — 根据文字描述生成视频。参数：`prompt`（必填）、`provider`（可选）、`duration`（5或10）、`aspect_ratio`（16:9、9:16、1:1）
-- **query_video_status** — 查询状态并下载。参数：`task_id`（必填）、`provider`（必填）
+- **generate_video** — 文生视频或图生视频。参数：`prompt`、`provider`、`duration`（5/10）、`aspect_ratio`（16:9/9:16/1:1）、`image_url`（图生视频，仅 Veo）
+- **query_video_status** — 轮询状态并自动下载。参数：`task_id`、`provider`
 
 ### 音频
-- **generate_speech** — 文字转语音。参数：`text`（必填）、`voice_id`（可选：`female-shaonv`、`male-qn-qingse`、`cute_boy`）、`speed`（0.5-2.0）
-- **generate_music** — AI 音乐生成。参数：`prompt`（必填，10-300字）、`lyrics`（可选，支持 `[Verse]`/`[Chorus]`/`[Bridge]`）
+- **generate_speech** — 文字转语音。参数：`text`、`provider`（minimax/google-tts）、`voice_id`、`speed`（0.5-2.0）
+- **generate_music** — AI 音乐生成。参数：`prompt`、`provider`（minimax/google-lyria）、`lyrics`（可选）
+
+### 转录
+- **transcribe_audio** — 语音转文字 + 词级时间戳（Google Chirp 2）。参数：`audio_path`、`language_code`。可配合 `ffmpeg add_subtitles` 实现全自动字幕
 
 ### 工具
-- **list_providers** — 列出所有已配置的视频、语音、音乐平台
+- **list_providers** — 列出所有已配置的视频、语音、音乐、转录平台
 
 ## 环境变量
 
@@ -237,7 +251,10 @@ src/video_gen/
 └── audio/
     ├── __init__.py        # TTS/音乐 基类 + 注册机制
     ├── minimax_tts.py     # MiniMax 语音合成 (speech-2.6-hd)
-    └── minimax_music.py   # MiniMax 音乐生成 (music-2.0)
+    ├── minimax_music.py   # MiniMax 音乐生成 (music-2.0)
+    ├── google_lyria.py    # Google Lyria 2 纯器乐生成 (Vertex AI)
+    ├── google_tts.py      # Google Cloud TTS Chirp 3 HD (需 ADC)
+    └── google_stt.py      # Google Cloud STT Chirp 2 (语音转文字)
 ```
 
 ### 添加新平台

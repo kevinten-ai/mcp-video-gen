@@ -1,7 +1,7 @@
 [project]
 name = "mcp-video-gen"
-version = "1.1.0"
-description = "MCP server for AI video, speech & music generation with multiple providers. Video: CogVideoX, DashScope, Kling, SiliconFlow, Vidu, MiniMax. Audio: MiniMax TTS & Music."
+version = "1.2.0"
+description = "MCP server for AI video, speech, music & transcription with multiple providers. Video: CogVideoX, DashScope, Kling, SiliconFlow, Vidu, MiniMax, Google Veo. Audio: MiniMax + Google Lyria/TTS/STT."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
