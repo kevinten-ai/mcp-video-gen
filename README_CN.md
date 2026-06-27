@@ -8,12 +8,12 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
-  <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version 1.2.0">
+  <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version 1.3.0">
 </p>
 
 <p align="center">
   <strong>多平台 AI 视频、语音、音乐、转录 MCP 服务器。</strong><br>
-  7 个视频平台 + 图生视频 + TTS + 音乐 + 语音转文字，统一接口。<br>
+  8 个视频平台 + 图生视频 + TTS + 音乐 + 语音转文字，统一接口。<br>
   支持 Claude Code、Claude Desktop、Cursor 及所有 MCP 兼容客户端。
 </p>
 
@@ -23,12 +23,12 @@
 
 ## 特性
 
-- **7 个视频平台** — 智谱、通义万相、可灵、硅基流动、Vidu、海螺、Google Veo (2/3/3.1)
+- **8 个视频平台** — 火山方舟 Seedance、智谱、通义万相、可灵、硅基流动、Vidu、海螺、Google Veo (2/3/3.1)
 - **图生视频** — 从参考图片生成视频（Veo）
 - **语音合成** — MiniMax TTS（+ Google Chirp 3 HD 需 ADC）
 - **音乐生成** — MiniMax Music + **Google Lyria**（纯器乐，~33秒，GCP 赠金）
 - **语音转文字** — Google Chirp 2 转录 + 词级时间戳（字幕生成）
-- **免费优先** — CogVideoX 完全免费，无限量
+- **Ark 迁移就绪** — 可用 `ARK_API_KEY` / `ARK_VIDEO_*` 调用火山方舟 Seedance 视频生成
 - **灵活切换** — 通过 `provider` 参数每次请求选择最优平台
 - **自动下载** — 生成的视频/音频自动保存到本地
 
@@ -55,6 +55,7 @@
 
 | 平台 | 模型 | 免费额度 | 画质 | 时长 | 适用场景 |
 |---|---|---|---|---|---|
+| **火山方舟 Seedance** | doubao-seedance-2.0 | 视频生成计费 | 720p+ | 5-10秒 | Ark 迁移、豆包/Seedance 工作流 |
 | **智谱清影** CogVideoX-Flash | cogvideox-flash | **完全免费** | 1440x960 | 6秒 | 入门、免费使用 |
 | **阿里通义万相** Wan 2.6 | wan2.6-t2v | 50秒（90天） | 最高1080P | 5-10秒 | 高质量、中文内容 |
 | **可灵** Kling AI | kling-v2-master | 每天66积分（网页端） | 720p | 5-10秒 | 画质好，每日免费 |
@@ -67,8 +68,11 @@
 
 ```
 需要生成视频？
+  ├─ 正在从智谱迁移 / 使用火山方舟？
+  │   └─ ark ✅（Seedance 视频任务 API）
+  │
   ├─ 免费 / 初次尝试？
-  │   └─ cogvideo ✅（完全免费，无门槛）
+  │   └─ cogvideo（旧可选 provider）
   │
   ├─ 需要最高画质？
   │   ├─ minimax（国内最好，付费）
@@ -121,13 +125,15 @@ uv sync --extra gcp  # 使用 Google Veo 时加这个
 <summary><b>Claude Code（命令行）— 推荐</b></summary>
 
 ```bash
-# 最简（仅免费 CogVideoX）
+# 最简 Ark 配置
 claude mcp add -s user mcp-video-gen \
-  --env COGVIDEO_API_KEY=你的key \
+  --env ARK_API_KEY=你的key \
+  --env ARK_VIDEO_MODEL=doubao-seedance-2-0-fast-260128 \
   -- uv --directory /path/to/mcp-video-gen run video-gen
 
 # 完整（含 Veo）
 claude mcp add -s user mcp-video-gen \
+  --env ARK_API_KEY=你的key \
   --env COGVIDEO_API_KEY=你的key \
   --env KLING_ACCESS_KEY=你的ak \
   --env KLING_SECRET_KEY=你的sk \
@@ -151,7 +157,8 @@ claude mcp add -s user mcp-video-gen \
       "command": "uv",
       "args": ["--directory", "/path/to/mcp-video-gen", "run", "--extra", "gcp", "video-gen"],
       "env": {
-        "COGVIDEO_API_KEY": "你的key",
+        "ARK_API_KEY": "你的key",
+        "ARK_VIDEO_MODEL": "doubao-seedance-2-0-fast-260128",
         "GCP_PROJECT_ID": "你的项目ID",
         "GEMINI_API_KEY": "你的gcp_api_key"
       }
@@ -175,7 +182,7 @@ AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status`
 ## 工具说明（共 7 个）
 
 ### 视频
-- **generate_video** — 文生视频或图生视频。参数：`prompt`、`provider`、`duration`（5/10）、`aspect_ratio`（16:9/9:16/1:1）、`image_url`（图生视频，仅 Veo）
+- **generate_video** — 文生视频或图生视频。参数：`prompt`、`provider`、`duration`（5/10）、`aspect_ratio`（16:9/9:16/1:1）、`image_url`（图生视频，Ark/Veo）
 - **query_video_status** — 轮询状态并自动下载。参数：`task_id`、`provider`
 
 ### 音频
@@ -192,7 +199,13 @@ AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status`
 
 | 变量 | 平台 | 说明 |
 |---|---|---|
-| `COGVIDEO_API_KEY` | 智谱清影 | 至少配置 |
+| `ARK_API_KEY` | 火山方舟 Seedance | 至少配置一个平台 |
+| `ARK_VIDEO_API_KEY` | 火山方舟 Seedance | 可选，视频专用 key |
+| `ARK_VIDEO_BASE_URL` | 火山方舟 Seedance | 可选，默认 `https://ark.cn-beijing.volces.com/api/v3` |
+| `ARK_VIDEO_MODEL` | 火山方舟 Seedance | 可选，默认 `doubao-seedance-2-0-fast-260128` |
+| `ARK_VIDEO_RESOLUTION` | 火山方舟 Seedance | 可选，默认 `720p` |
+| `DEFAULT_VIDEO_PROVIDER` | 所有视频平台 | 可选，配置 Ark 时默认优先 `ark` |
+| `COGVIDEO_API_KEY` | 智谱清影 | 旧可选 provider |
 | `DASHSCOPE_API_KEY` | 阿里通义万相 | 一个平台 |
 | `KLING_ACCESS_KEY` | 可灵 | |
 | `KLING_SECRET_KEY` | 可灵 | |

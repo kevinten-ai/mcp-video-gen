@@ -8,12 +8,12 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
-  <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version 1.2.0">
+  <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version 1.3.0">
 </p>
 
 <p align="center">
   <strong>Multi-provider AI video, speech, music & transcription MCP server.</strong><br>
-  7 video providers + image-to-video + TTS + music + STT — one unified interface.<br>
+  8 video providers + image-to-video + TTS + music + STT — one unified interface.<br>
   Works with Claude Code, Claude Desktop, Cursor, and any MCP-compatible client.
 </p>
 
@@ -23,12 +23,12 @@
 
 ## Features
 
-- **7 video providers** — CogVideoX, DashScope/Wan, Kling, SiliconFlow, Vidu, MiniMax, Google Veo (2/3/3.1)
+- **8 video providers** — Volcengine Ark Seedance, CogVideoX, DashScope/Wan, Kling, SiliconFlow, Vidu, MiniMax, Google Veo (2/3/3.1)
 - **Image-to-video** — generate videos from reference images (Veo)
 - **TTS** — text-to-speech via MiniMax (+ Google Chirp 3 HD with ADC)
 - **Music generation** — MiniMax Music + **Google Lyria** (instrumental, ~33s, GCP credits)
 - **Speech-to-text** — transcribe audio with word-level timestamps via Google Chirp 2 (for subtitle generation)
-- **Free-tier focused** — CogVideoX is completely free with unlimited usage
+- **Ark migration ready** — Volcengine Ark Seedance is available via `ARK_API_KEY` / `ARK_VIDEO_*`
 - **Provider switching** — choose the best provider per request via `provider` parameter
 - **Auto-download** — generated videos/audio saved to local disk automatically
 
@@ -55,6 +55,7 @@ All video providers use an **async pattern**: submit a generation request, get a
 
 | Provider | Model | Free Tier | Quality | Duration | Best for |
 |---|---|---|---|---|---|
+| **Volcengine Ark Seedance** | doubao-seedance-2.0 | Paid video API | 720p+ | 5-10s | Ark migration, Doubao/Seedance workflows |
 | **CogVideoX-Flash** (智谱) | cogvideox-flash | **Unlimited free** | 1440x960 | 6s | Getting started, free usage |
 | **DashScope / Wan** (通义万相) | wan2.6-t2v | 50s free (90 days) | Up to 1080P | 5-10s | High quality, Chinese content |
 | **Kling AI** (可灵) | kling-v2-master | 66 credits/day (web only) | 720p | 5-10s | Good quality, daily free credits |
@@ -67,8 +68,11 @@ All video providers use an **async pattern**: submit a generation request, get a
 
 ```
 Need a video?
+  ├─ Migrating from Zhipu / using Volcengine Ark?
+  │   └─ ark ✅ (Seedance video task API)
+  │
   ├─ Free / just trying it out?
-  │   └─ cogvideo ✅ (unlimited free, no signup hassle)
+  │   └─ cogvideo (legacy optional provider)
   │
   ├─ Need highest quality?
   │   ├─ minimax (best Chinese provider, paid)
@@ -121,13 +125,15 @@ Only configure the providers you want to use. At least one API key is required.
 <summary><b>Claude Code (CLI) — recommended</b></summary>
 
 ```bash
-# Minimal (free CogVideoX only)
+# Minimal Ark setup
 claude mcp add -s user mcp-video-gen \
-  --env COGVIDEO_API_KEY=your_key \
+  --env ARK_API_KEY=your_key \
+  --env ARK_VIDEO_MODEL=doubao-seedance-2-0-fast-260128 \
   -- uv --directory /path/to/mcp-video-gen run video-gen
 
 # Full (all providers including Veo)
 claude mcp add -s user mcp-video-gen \
+  --env ARK_API_KEY=your_key \
   --env COGVIDEO_API_KEY=your_key \
   --env KLING_ACCESS_KEY=your_ak \
   --env KLING_SECRET_KEY=your_sk \
@@ -151,7 +157,8 @@ claude mcp add -s user mcp-video-gen \
       "command": "uv",
       "args": ["--directory", "/path/to/mcp-video-gen", "run", "--extra", "gcp", "video-gen"],
       "env": {
-        "COGVIDEO_API_KEY": "your_key",
+        "ARK_API_KEY": "your_key",
+        "ARK_VIDEO_MODEL": "doubao-seedance-2-0-fast-260128",
         "GCP_PROJECT_ID": "your-project-id",
         "GEMINI_API_KEY": "your_gcp_api_key"
       }
@@ -175,7 +182,7 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 ## Tools (7 total)
 
 ### Video
-- **generate_video** — Text-to-video or image-to-video generation. Params: `prompt`, `provider`, `duration` (5/10), `aspect_ratio` (16:9/9:16/1:1), `image_url` (for img2vid, Veo only).
+- **generate_video** — Text-to-video or image-to-video generation. Params: `prompt`, `provider`, `duration` (5/10), `aspect_ratio` (16:9/9:16/1:1), `image_url` (for img2vid, Ark/Veo).
 - **query_video_status** — Poll generation status and auto-download. Params: `task_id`, `provider`.
 
 ### Audio
@@ -191,7 +198,27 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 ## API Key Registration Guide
 
 <details>
-<summary><b>1. CogVideoX-Flash (智谱清影) — Free Unlimited ✅ Recommended starting point</b></summary>
+<summary><b>1. Volcengine Ark Seedance — Recommended Ark migration path</b></summary>
+
+| Item | Detail |
+|---|---|
+| Platform | Volcengine Ark |
+| URL | https://console.volcengine.com/ark |
+| Pricing | Ark video generation billing; may not be covered by CodingPlan chat quota |
+| Env Var | `ARK_API_KEY` or `ARK_VIDEO_API_KEY` |
+
+**Steps:**
+1. Create or reuse a Volcengine Ark API key.
+2. Set `ARK_API_KEY` for shared Ark credentials, or `ARK_VIDEO_API_KEY` if you want a video-specific key.
+3. Optional: set `ARK_VIDEO_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`.
+4. Optional: set `ARK_VIDEO_MODEL=doubao-seedance-2-0-fast-260128`.
+
+> The Ark video provider calls `/contents/generations/tasks`. It does not use the CodingPlan chat completions endpoint.
+
+</details>
+
+<details>
+<summary><b>2. CogVideoX-Flash (智谱清影) — Legacy optional provider</b></summary>
 
 | Item | Detail |
 |---|---|
@@ -348,7 +375,13 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 
 | Variable | Provider | Required |
 |---|---|---|
-| `COGVIDEO_API_KEY` | CogVideoX (智谱) | At least one provider |
+| `ARK_API_KEY` | Volcengine Ark Seedance | At least one provider |
+| `ARK_VIDEO_API_KEY` | Volcengine Ark Seedance | Optional video-specific override |
+| `ARK_VIDEO_BASE_URL` | Volcengine Ark Seedance | Optional, default: `https://ark.cn-beijing.volces.com/api/v3` |
+| `ARK_VIDEO_MODEL` | Volcengine Ark Seedance | Optional, default: `doubao-seedance-2-0-fast-260128` |
+| `ARK_VIDEO_RESOLUTION` | Volcengine Ark Seedance | Optional, default: `720p` |
+| `DEFAULT_VIDEO_PROVIDER` | All providers | Optional, default prefers `ark` when configured |
+| `COGVIDEO_API_KEY` | CogVideoX (智谱) | Legacy optional provider |
 | `DASHSCOPE_API_KEY` | Wan / DashScope (阿里) | must be configured |
 | `KLING_ACCESS_KEY` | Kling AI (可灵) | |
 | `KLING_SECRET_KEY` | Kling AI (可灵) | |

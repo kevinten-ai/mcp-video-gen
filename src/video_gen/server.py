@@ -17,6 +17,7 @@ from .providers import (
     get_provider,
     list_providers as get_all_providers,
 )
+from .providers.ark import ArkVideoProvider
 from .providers.cogvideo import CogVideoProvider
 from .providers.kling import KlingProvider
 from .providers.minimax import MiniMaxProvider
@@ -53,6 +54,10 @@ server = Server("mcp-video-gen")
 
 def _init_providers() -> None:
     """Register providers based on available environment variables."""
+    ark_key = os.getenv("ARK_VIDEO_API_KEY", "") or os.getenv("ARK_API_KEY", "")
+    if ark_key:
+        register_provider(ArkVideoProvider(ark_key))
+
     cogvideo_key = os.getenv("COGVIDEO_API_KEY", "")
     if cogvideo_key:
         register_provider(CogVideoProvider(cogvideo_key))
@@ -119,7 +124,10 @@ _init_providers()
 def _default_provider_name() -> str | None:
     """Return the default provider name (prefer free providers)."""
     providers = get_all_providers()
-    for name in ("cogvideo", "dashscope", "kling", "siliconflow", "vidu", "minimax", "veo"):
+    preferred = os.getenv("DEFAULT_VIDEO_PROVIDER", "")
+    if preferred in providers:
+        return preferred
+    for name in ("ark", "cogvideo", "dashscope", "kling", "siliconflow", "vidu", "minimax", "veo"):
         if name in providers:
             return name
     return None
@@ -161,7 +169,7 @@ async def handle_list_tools() -> list[types.Tool]:
     tools = [
         types.Tool(
             name="generate_video",
-            description=f"Generate a video from a text prompt (text-to-video) or from an image + prompt (image-to-video, veo only). Available providers: {', '.join(provider_names) or 'none configured'}. Default: {default or 'none'}.",
+            description=f"Generate a video from a text prompt (text-to-video) or from an image + prompt (image-to-video, ark/veo). Available providers: {', '.join(provider_names) or 'none configured'}. Default: {default or 'none'}.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -176,7 +184,7 @@ async def handle_list_tools() -> list[types.Tool]:
                     },
                     "image_url": {
                         "type": "string",
-                        "description": "Reference image for image-to-video generation (veo only). Accepts: local file path, HTTP URL, or gs:// URI. Optional.",
+                        "description": "Reference image for image-to-video generation (ark/veo). Accepts: local file path, HTTP URL, or gs:// URI. Optional.",
                     },
                     "duration": {
                         "type": "integer",
@@ -534,7 +542,7 @@ async def main():
             write_stream,
             InitializationOptions(
                 server_name="mcp-video-gen",
-                server_version="1.2.0",
+                server_version="1.3.0",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},
