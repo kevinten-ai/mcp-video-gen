@@ -1,6 +1,7 @@
 """Alibaba DashScope / Wan provider (通义万相) - 50s free video quota."""
 
 from __future__ import annotations
+import os
 import httpx
 from . import BaseProvider, VideoResult
 
@@ -8,8 +9,14 @@ API_BASE = "https://dashscope.aliyuncs.com/api/v1"
 
 
 class DashScopeProvider(BaseProvider):
+    MODELS = {
+        "wan2.7-t2v": {"name": "Wan 2.7 T2V", "resolution": "1080p", "pricing": "Per-second"},
+        "wan2.6-t2v": {"name": "Wan 2.6 T2V", "resolution": "1080p", "pricing": "Per-second"},
+    }
+
     def __init__(self, api_key: str):
         self.api_key = api_key
+        self._default_model = os.getenv("DASHSCOPE_MODEL", "wan2.7-t2v")
 
     @property
     def name(self) -> str:
@@ -17,11 +24,19 @@ class DashScopeProvider(BaseProvider):
 
     @property
     def description(self) -> str:
-        return "Alibaba Wan 2.6 (通义万相) - High quality video generation (up to 1080P, 5-10s)"
+        return "Alibaba Wan 2.7 (通义万相) - High quality video generation (up to 1080P, 5-15s)"
 
     @property
     def free_tier_info(self) -> str:
         return "50 seconds free for new users (valid 90 days)"
+
+    @property
+    def models(self) -> dict:
+        return self.MODELS
+
+    @property
+    def default_model(self) -> str:
+        return self._default_model
 
     async def generate(
         self,
@@ -29,7 +44,10 @@ class DashScopeProvider(BaseProvider):
         duration: int = 5,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
+        model = model or self._default_model
+
         size_map = {
             "16:9": "1280*720",
             "9:16": "720*1280",
@@ -38,7 +56,7 @@ class DashScopeProvider(BaseProvider):
         size = size_map.get(aspect_ratio, "1280*720")
 
         body = {
-            "model": "wan2.6-t2v",
+            "model": model,
             "input": {
                 "prompt": prompt,
             },

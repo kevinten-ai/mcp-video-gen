@@ -182,7 +182,7 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 ## Tools (7 total)
 
 ### Video
-- **generate_video** — Text-to-video or image-to-video generation. Params: `prompt`, `provider`, `duration` (5/10), `aspect_ratio` (16:9/9:16/1:1), `image_url` (for img2vid, Ark/Veo).
+- **generate_video** — Text-to-video or image-to-video generation. Params: `prompt`, `provider`, `duration` (5/10), `aspect_ratio` (16:9/9:16/1:1), `image_url` (for img2vid, Ark/Veo), `model` (optional provider model ID).
 - **query_video_status** — Poll generation status and auto-download. Params: `task_id`, `provider`.
 
 ### Audio
@@ -193,7 +193,8 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 - **transcribe_audio** — Speech-to-text with word-level timestamps (Google Chirp 2). Params: `audio_path`, `language_code` (en-US/cmn-CN/ja-JP/...). Use with `ffmpeg add_subtitles` for full subtitle pipeline.
 
 ### Utility
-- **list_providers** — Show all configured video, TTS, music, and STT providers.
+- **list_providers** — Show all configured video, TTS, music, and STT providers, including default video models.
+- **resources** — Read `providers://models/<provider>` for a provider model catalog and supported model IDs.
 
 ## API Key Registration Guide
 
@@ -350,11 +351,11 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 
 | Model | Resolution | Pricing | Best for |
 |---|---|---|---|
-| `veo-2.0-generate-001` (default) | 720p | ~$0.50/sec | Stable, GA |
+| `veo-2.0-generate-001` | 720p | ~$0.50/sec | Stable, GA |
 | `veo-3.0-generate-001` | 1080p | ~$0.75/sec | High quality |
 | `veo-3.0-fast-generate-001` | 1080p | ~$0.15/sec | Cost-effective |
 | `veo-3.1-generate-001` | **4K** | ~$0.75/sec | Highest quality |
-| `veo-3.1-fast-generate-001` | 1080p | ~$0.10/sec | **Best value** ✅ |
+| `veo-3.1-fast-generate-001` (default) | 1080p | ~$0.10/sec | **Best value** ✅ |
 
 **Auth options:**
 1. **GCP API Key** (recommended) — set `GEMINI_API_KEY=your_gcp_api_key`. Simplest setup, no extra deps.
@@ -364,7 +365,7 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 
 | Variable | Default | Description |
 |---|---|---|
-| `VEO_MODEL` | `veo-2.0-generate-001` | Model to use |
+| `VEO_MODEL` | `veo-3.1-fast-generate-001` | Model to use |
 | `VEO_GCS_BUCKET` | — | GCS bucket for output (omit for base64 inline) |
 | `GCP_REGION` | `us-central1` | Vertex AI region |
 | `GEMINI_API_KEY` | — | GCP API key (shared with mcp-image-gen) |
@@ -392,7 +393,7 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 | `GCP_PROJECT_ID` | Google Veo | Required for Veo |
 | `GEMINI_API_KEY` | Google Veo | Recommended for Veo (or use ADC) |
 | `GCP_REGION` | Google Veo | Optional, default: `us-central1` |
-| `VEO_MODEL` | Google Veo | Optional, default: `veo-2.0-generate-001` |
+| `VEO_MODEL` | Google Veo | Optional, default: `veo-3.1-fast-generate-001` |
 | `VEO_GCS_BUCKET` | Google Veo | Optional, GCS bucket for video output |
 | `VIDEO_OUTPUT_DIR` | All providers | Optional, default: `./output` |
 
@@ -422,7 +423,7 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 - **API Key vs ADC:** `GEMINI_API_KEY` is the simplest auth method. Same key works for both mcp-image-gen and mcp-video-gen.
 - **`--extra gcp` placement:** Must come after `run` in the uv command: `uv --directory /path run --extra gcp video-gen` (NOT `uv --directory /path --extra gcp run video-gen`)
 - **Base64 mode:** Without `VEO_GCS_BUCKET`, videos are returned as base64 in the API response and decoded locally. Works well for videos under 8s.
-- **Cost control:** Use `veo-3.0-fast-generate-001` ($0.15/sec) instead of default Veo 2 ($0.50/sec) for 70% savings with 1080p output.
+- **Cost control:** The default is `veo-3.1-fast-generate-001` for lower-cost 1080p output. Override `VEO_MODEL` or pass `model` to `generate_video` for a specific request.
 
 ### Download Issues
 
@@ -461,7 +462,7 @@ src/video_gen/
 1. Create `src/video_gen/providers/your_provider.py`
 2. Implement `BaseProvider` (properties: `name`, `description`, `free_tier_info`; methods: `generate()`, `query()`)
 3. Register in `server.py:_init_providers()` with env var check
-4. Provider appears automatically in `list_providers` and `generate_video` tool schema
+4. Provider appears automatically in `list_providers`, `providers://models/<provider>`, and the `generate_video` tool schema
 
 ## Local Development
 

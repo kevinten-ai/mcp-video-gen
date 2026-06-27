@@ -19,7 +19,7 @@ MODELS = {
     "veo-3.1-fast-generate-001": {"name": "Veo 3.1 Fast", "resolution": "1080p", "pricing": "~$0.10/s"},
 }
 
-DEFAULT_MODEL = os.getenv("VEO_MODEL", "veo-2.0-generate-001")
+DEFAULT_MODEL = os.getenv("VEO_MODEL", "veo-3.1-fast-generate-001")
 GCS_BUCKET = os.getenv("VEO_GCS_BUCKET", "")
 
 
@@ -67,6 +67,14 @@ class VeoProvider(BaseProvider):
     def free_tier_info(self) -> str:
         return "Uses GCP credits/billing. No free tier."
 
+    @property
+    def models(self) -> dict:
+        return MODELS
+
+    @property
+    def default_model(self) -> str:
+        return DEFAULT_MODEL
+
     async def _load_image(self, image_url: str) -> dict | None:
         """Load image from local path or URL, return Vertex AI image dict."""
         try:
@@ -103,8 +111,9 @@ class VeoProvider(BaseProvider):
         duration: int = 8,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
-        model = DEFAULT_MODEL
+        model = model or DEFAULT_MODEL
         url = f"{self._base_url(model)}:predictLongRunning"
 
         parameters: dict = {

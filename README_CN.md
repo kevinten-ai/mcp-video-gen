@@ -182,7 +182,7 @@ AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status`
 ## 工具说明（共 7 个）
 
 ### 视频
-- **generate_video** — 文生视频或图生视频。参数：`prompt`、`provider`、`duration`（5/10）、`aspect_ratio`（16:9/9:16/1:1）、`image_url`（图生视频，Ark/Veo）
+- **generate_video** — 文生视频或图生视频。参数：`prompt`、`provider`、`duration`（5/10）、`aspect_ratio`（16:9/9:16/1:1）、`image_url`（图生视频，Ark/Veo）、`model`（可选模型 ID）
 - **query_video_status** — 轮询状态并自动下载。参数：`task_id`、`provider`
 
 ### 音频
@@ -193,7 +193,8 @@ AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status`
 - **transcribe_audio** — 语音转文字 + 词级时间戳（Google Chirp 2）。参数：`audio_path`、`language_code`。可配合 `ffmpeg add_subtitles` 实现全自动字幕
 
 ### 工具
-- **list_providers** — 列出所有已配置的视频、语音、音乐、转录平台
+- **list_providers** — 列出所有已配置的视频、语音、音乐、转录平台和默认视频模型
+- **resources** — 读取 `providers://models/<provider>` 查看平台模型目录和可用模型 ID
 
 ## 环境变量
 
@@ -255,7 +256,7 @@ src/video_gen/
 ├── providers/
 │   ├── __init__.py        # Provider 基类 + 注册机制
 │   ├── cogvideo.py        # 智谱 CogVideoX-Flash
-│   ├── dashscope.py       # 阿里 通义万相 Wan 2.6
+│   ├── dashscope.py       # 阿里 通义万相 Wan 2.7
 │   ├── kling.py           # 可灵 Kling AI (JWT 认证)
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow
 │   ├── vidu.py            # 生数 Vidu
@@ -275,7 +276,7 @@ src/video_gen/
 1. 创建 `src/video_gen/providers/your_provider.py`
 2. 实现 `BaseProvider`（属性：`name`、`description`、`free_tier_info`；方法：`generate()`、`query()`）
 3. 在 `server.py:_init_providers()` 中注册，通过环境变量控制启用
-4. 新平台自动出现在 `list_providers` 和 `generate_video` 工具中
+4. 新平台自动出现在 `list_providers`、`providers://models/<provider>` 和 `generate_video` 工具中
 
 ## 本地开发
 

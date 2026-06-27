@@ -1,6 +1,7 @@
 """SiliconFlow provider (硅基流动) - Registration bonus credits."""
 
 from __future__ import annotations
+import os
 import httpx
 from . import BaseProvider, VideoResult
 
@@ -8,8 +9,14 @@ API_BASE = "https://api.siliconflow.com/v1"
 
 
 class SiliconFlowProvider(BaseProvider):
+    MODELS = {
+        "Wan-AI/Wan2.2-T2V-A14B": {"name": "Wan 2.2 T2V", "resolution": "720p", "pricing": "~$0.29/video"},
+        "Wan-AI/Wan2.1-T2V-14B": {"name": "Wan 2.1 T2V", "resolution": "720p", "pricing": "~$0.21/video"},
+    }
+
     def __init__(self, api_key: str):
         self.api_key = api_key
+        self._default_model = os.getenv("SILICONFLOW_MODEL", "Wan-AI/Wan2.2-T2V-A14B")
 
     @property
     def name(self) -> str:
@@ -23,13 +30,24 @@ class SiliconFlowProvider(BaseProvider):
     def free_tier_info(self) -> str:
         return "$1 registration bonus (~3 free videos), then ~$0.29/video"
 
+    @property
+    def models(self) -> dict:
+        return self.MODELS
+
+    @property
+    def default_model(self) -> str:
+        return self._default_model
+
     async def generate(
         self,
         prompt: str,
         duration: int = 5,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
+        model = model or self._default_model
+
         size_map = {
             "16:9": "1280x720",
             "9:16": "720x1280",
@@ -38,7 +56,7 @@ class SiliconFlowProvider(BaseProvider):
         image_size = size_map.get(aspect_ratio, "1280x720")
 
         body = {
-            "model": "Wan-AI/Wan2.1-T2V-14B",
+            "model": model,
             "prompt": prompt,
             "image_size": image_size,
         }

@@ -11,6 +11,13 @@ from . import BaseProvider, VideoResult
 
 DEFAULT_API_BASE = "https://ark.cn-beijing.volces.com/api/v3"
 DEFAULT_MODEL = "doubao-seedance-2-0-fast-260128"
+MODELS = {
+    "doubao-seedance-2-0-fast-260128": {
+        "name": "Seedance 2.0 Fast",
+        "resolution": "720p",
+        "pricing": "Ark video billing",
+    },
+}
 
 
 def _api_base() -> str:
@@ -92,6 +99,14 @@ class ArkVideoProvider(BaseProvider):
     def free_tier_info(self) -> str:
         return "Paid Ark video generation; may not be covered by CodingPlan chat quota"
 
+    @property
+    def models(self) -> dict:
+        return MODELS
+
+    @property
+    def default_model(self) -> str:
+        return self.model
+
     def _prompt_text(self, prompt: str, duration: int) -> str:
         duration = max(1, min(int(duration or 5), 10))
         return f"{prompt.strip()} --resolution {self.resolution} --duration {duration}"
@@ -102,6 +117,7 @@ class ArkVideoProvider(BaseProvider):
         duration: int = 5,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
         content: list[dict[str, Any]] = [
             {"type": "text", "text": self._prompt_text(prompt, duration)}
@@ -114,7 +130,7 @@ class ArkVideoProvider(BaseProvider):
             })
 
         body = {
-            "model": self.model,
+            "model": model or self.model,
             "content": content,
         }
 

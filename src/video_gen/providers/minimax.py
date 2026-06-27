@@ -1,14 +1,21 @@
 """MiniMax Hailuo provider (海螺) - Paid video generation."""
 
 from __future__ import annotations
+import os
 import httpx
 from . import BaseProvider, VideoResult
 
 
 class MiniMaxProvider(BaseProvider):
+    MODELS = {
+        "MiniMax-Hailuo-2.3": {"name": "Hailuo 2.3", "resolution": "1080p", "pricing": "~$0.10-0.52/video"},
+        "MiniMax-Hailuo-02": {"name": "Hailuo 02", "resolution": "768p", "pricing": "~$0.05-0.26/video"},
+    }
+
     def __init__(self, api_key: str, api_host: str = "https://api.minimax.chat"):
         self.api_key = api_key
         self.api_host = api_host
+        self._default_video_model = os.getenv("MINIMAX_VIDEO_MODEL", "MiniMax-Hailuo-2.3")
 
     @property
     def name(self) -> str:
@@ -22,15 +29,26 @@ class MiniMaxProvider(BaseProvider):
     def free_tier_info(self) -> str:
         return "Paid. ~$0.10/video (512P 6s) to ~$0.52/video (1080P 6s)"
 
+    @property
+    def models(self) -> dict:
+        return self.MODELS
+
+    @property
+    def default_model(self) -> str:
+        return self._default_video_model
+
     async def generate(
         self,
         prompt: str,
         duration: int = 6,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
+        model = model or self._default_video_model
+
         body = {
-            "model": "MiniMax-Hailuo-2.3",
+            "model": model,
             "prompt": prompt,
         }
 

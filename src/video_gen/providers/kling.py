@@ -1,6 +1,7 @@
 """Kling AI provider (可灵) - 66 free credits/day."""
 
 from __future__ import annotations
+import os
 import time
 import jwt
 import httpx
@@ -10,9 +11,15 @@ API_BASE = "https://api.klingai.com"
 
 
 class KlingProvider(BaseProvider):
+    MODELS = {
+        "kling-v3": {"name": "Kling 3.0", "resolution": "1080p", "pricing": "Credit-based"},
+        "kling-v2-master": {"name": "Kling 2.0 Master", "resolution": "720p", "pricing": "Credit-based"},
+    }
+
     def __init__(self, access_key: str, secret_key: str):
         self.access_key = access_key
         self.secret_key = secret_key
+        self._default_model = os.getenv("KLING_MODEL", "kling-v3")
 
     @property
     def name(self) -> str:
@@ -25,6 +32,14 @@ class KlingProvider(BaseProvider):
     @property
     def free_tier_info(self) -> str:
         return "66 free credits/day (1 standard 5s video = 2 credits)"
+
+    @property
+    def models(self) -> dict:
+        return self.MODELS
+
+    @property
+    def default_model(self) -> str:
+        return self._default_model
 
     def _make_token(self) -> str:
         now = int(time.time())
@@ -41,9 +56,12 @@ class KlingProvider(BaseProvider):
         duration: int = 5,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
+        model = model or self._default_model
+
         body = {
-            "model_name": "kling-v2-master",
+            "model_name": model,
             "prompt": prompt,
             "mode": "std",
             "aspect_ratio": aspect_ratio,

@@ -30,6 +30,16 @@ class BaseProvider(ABC):
     def free_tier_info(self) -> str:
         ...
 
+    @property
+    def models(self) -> dict:
+        """Available models for this provider. Override in subclasses."""
+        return {}
+
+    @property
+    def default_model(self) -> str:
+        """Default model ID. Override in subclasses if multiple models exist."""
+        return ""
+
     @abstractmethod
     async def generate(
         self,
@@ -37,6 +47,7 @@ class BaseProvider(ABC):
         duration: int = 5,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
         ...
 

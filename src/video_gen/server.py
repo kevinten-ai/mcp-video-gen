@@ -121,6 +121,51 @@ def _init_providers() -> None:
 _init_providers()
 
 
+@server.list_resources()
+async def handle_list_resources() -> list[types.Resource]:
+    resources = []
+    for name, provider in get_all_providers().items():
+        if provider.models:
+            resources.append(types.Resource(
+                uri=f"providers://models/{name}",
+                name=f"{name} Models",
+                description=f"Available models for {name}: {', '.join(provider.models.keys())}",
+                mimeType="text/markdown",
+            ))
+    if not resources:
+        resources.append(types.Resource(
+            uri="providers://models",
+            name="Model Catalog",
+            description="No providers configured. Set API keys to enable providers.",
+            mimeType="text/markdown",
+        ))
+    return resources
+
+
+@server.read_resource()
+async def handle_read_resource(uri: types.AnyUrl) -> str:
+    uri_str = str(uri)
+    # providers://models/<provider_name>
+    if uri_str.startswith("providers://models/"):
+        provider_name = uri_str.split("/")[-1]
+        provider = get_provider(provider_name)
+        if not provider:
+            return f"Unknown provider: {provider_name}"
+        models = provider.models
+        if not models:
+            return f"No model catalog for {provider_name}"
+        lines = [f"# {provider_name.title()} Models\n"]
+        lines.append(f"**Default**: `{provider.default_model}`\n")
+        lines.append("| Model ID | Name | Resolution | Pricing |")
+        lines.append("|---|---|---|---|")
+        for mid, info in models.items():
+            default_marker = " **(default)**" if mid == provider.default_model else ""
+            lines.append(f"| `{mid}` | {info.get('name', mid)}{default_marker} | {info.get('resolution', '-')} | {info.get('pricing', '-')} |")
+        lines.append(f"\nPass `model` parameter to `generate_video` to use a specific model.")
+        return "\n".join(lines)
+    raise ValueError(f"Unknown resource: {uri_str}")
+
+
 def _default_provider_name() -> str | None:
     """Return the default provider name (prefer free providers)."""
     providers = get_all_providers()
@@ -195,6 +240,10 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "Aspect ratio: 16:9, 9:16, or 1:1. Default: 16:9",
                         "default": "16:9",
+                    },
+                    "model": {
+                        "type": "string",
+                        "description": "Model ID to use (optional, uses provider default if omitted). Check 'providers://models' resource for available models.",
                     },
                     "output_directory": {
                         "type": "string",
@@ -352,7 +401,11 @@ async def handle_call_tool(
         if providers:
             lines.append("**Video Providers:**")
             for p in providers.values():
-                lines.append(f"  **{p.name}** - {p.description}\n    Free tier: {p.free_tier_info}")
+                model_info = ""
+                if p.models:
+                    default = p.default_model
+                    model_info = f"\n    Default model: `{default}`, Available: {', '.join(f'`{m}`' for m in p.models.keys())}"
+                lines.append(f"  **{p.name}** - {p.description}\n    Free tier: {p.free_tier_info}{model_info}")
         tts = get_all_tts()
         if tts:
             lines.append("\n**TTS Providers:**")
@@ -384,8 +437,9 @@ async def handle_call_tool(
         duration = arguments.get("duration", 5)
         aspect_ratio = arguments.get("aspect_ratio", "16:9")
         image_url = arguments.get("image_url")
+        model = arguments.get("model")
 
-        result = await provider.generate(prompt, duration=duration, aspect_ratio=aspect_ratio, image_url=image_url)
+        result = await provider.generate(prompt, duration=duration, aspect_ratio=aspect_ratio, image_url=image_url, model=model)
 
         if result.status == "failed":
             return [types.TextContent(type="text", text=f"Failed: {result.error}")]

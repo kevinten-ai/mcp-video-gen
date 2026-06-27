@@ -1,6 +1,7 @@
 """CogVideoX-Flash provider (智谱清影) - Free unlimited video generation."""
 
 from __future__ import annotations
+import os
 import httpx
 from . import BaseProvider, VideoResult
 
@@ -8,8 +9,15 @@ API_BASE = "https://open.bigmodel.cn/api/paas/v4"
 
 
 class CogVideoProvider(BaseProvider):
+    MODELS = {
+        "cogvideox-flash": {"name": "CogVideoX Flash", "resolution": "1440x960", "pricing": "Free"},
+        "cogvideox-2": {"name": "CogVideoX 2", "resolution": "1080p", "pricing": "~$0.07/video"},
+        "cogvideox-3": {"name": "CogVideoX 3", "resolution": "1080p", "pricing": "Paid"},
+    }
+
     def __init__(self, api_key: str):
         self.api_key = api_key
+        self._default_model = os.getenv("COGVIDEO_MODEL", "cogvideox-flash")
 
     @property
     def name(self) -> str:
@@ -23,13 +31,24 @@ class CogVideoProvider(BaseProvider):
     def free_tier_info(self) -> str:
         return "Completely free, no daily limit"
 
+    @property
+    def models(self) -> dict:
+        return self.MODELS
+
+    @property
+    def default_model(self) -> str:
+        return self._default_model
+
     async def generate(
         self,
         prompt: str,
         duration: int = 5,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
+        model = model or self._default_model
+
         size_map = {
             "16:9": "1920x1080",
             "9:16": "1080x1920",
@@ -38,7 +57,7 @@ class CogVideoProvider(BaseProvider):
         size = size_map.get(aspect_ratio, "1920x1080")
 
         body = {
-            "model": "cogvideox-flash",
+            "model": model,
             "prompt": prompt,
             "size": size,
             "quality": "speed",

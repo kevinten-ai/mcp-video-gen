@@ -1,6 +1,7 @@
 """Vidu provider (生数科技) - Promotional free credits."""
 
 from __future__ import annotations
+import os
 import httpx
 from . import BaseProvider, VideoResult
 
@@ -8,8 +9,15 @@ API_BASE = "https://api.vidu.com"
 
 
 class ViduProvider(BaseProvider):
+    MODELS = {
+        "q2-turbo": {"name": "Vidu Q2 Turbo", "resolution": "1080p", "pricing": "~$0.40/video"},
+        "q2-pro": {"name": "Vidu Q2 Pro", "resolution": "720p", "pricing": "~$0.20/video"},
+        "vidu-2.0": {"name": "Vidu 2.0", "resolution": "720p", "pricing": "Credit-based"},
+    }
+
     def __init__(self, api_key: str):
         self.api_key = api_key
+        self._default_model = os.getenv("VIDU_MODEL", "q2-turbo")
 
     @property
     def name(self) -> str:
@@ -17,11 +25,19 @@ class ViduProvider(BaseProvider):
 
     @property
     def description(self) -> str:
-        return "Vidu (生数科技) - High quality video generation with Vidu Q1 model"
+        return "Vidu Q2 (生数科技) - High quality video generation (up to 1080P, 4-10s)"
 
     @property
     def free_tier_info(self) -> str:
         return "Apply for 200 free API credits at platform.vidu.com"
+
+    @property
+    def models(self) -> dict:
+        return self.MODELS
+
+    @property
+    def default_model(self) -> str:
+        return self._default_model
 
     async def generate(
         self,
@@ -29,13 +45,16 @@ class ViduProvider(BaseProvider):
         duration: int = 4,
         aspect_ratio: str = "16:9",
         image_url: str | None = None,
+        model: str | None = None,
     ) -> VideoResult:
+        model = model or self._default_model
+
         body = {
-            "model": "vidu-2.0",
+            "model": model,
             "prompt": prompt,
             "duration": duration,
             "aspect_ratio": aspect_ratio,
-            "resolution": "720p",
+            "resolution": "1080p",
         }
 
         async with httpx.AsyncClient() as client:
