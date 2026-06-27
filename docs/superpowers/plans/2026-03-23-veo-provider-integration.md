@@ -314,14 +314,14 @@ After the vidu block (line 68), add:
 
 In `_default_provider_name()`, change the `for` loop tuple from:
 ```python
-    for name in ("cogvideo", "dashscope", "kling", "siliconflow", "vidu", "minimax"):
+    for name in ("ark", "dashscope", "kling", "siliconflow", "vidu", "minimax"):
 ```
 to:
 ```python
-    for name in ("cogvideo", "dashscope", "kling", "siliconflow", "vidu", "minimax", "veo"):
+    for name in ("ark", "dashscope", "kling", "siliconflow", "vidu", "minimax", "veo"):
 ```
 
-Veo is last because it costs money — free providers should be preferred by default.
+Veo is last because it costs money — the Ark migration path should be preferred by default when configured.
 
 - [ ] **Step 4: Handle Veo's local-file video_url in query_video_status**
 

@@ -21,7 +21,7 @@
 - Passed: non-generating Ark video API query smoke against a fake task id returned `status=404`, `resourceNotFound=True`, and `authRejected=False`.
 - Passed: `git diff --check`
 - Passed: staged additions secret/provider check
-- `scan_project.sh .` still reports the documented CogVideoX legacy optional provider, while the default Ark path and newly added staged lines do not introduce legacy provider runtime dependencies.
+- Follow-up 2026-06-27: the legacy video provider path was removed after the Ark Seedance provider became the migration target, so `scan_project.sh .` no longer reports old runtime markers.
 
 ## Notes
 

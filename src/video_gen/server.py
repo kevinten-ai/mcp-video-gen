@@ -18,7 +18,6 @@ from .providers import (
     list_providers as get_all_providers,
 )
 from .providers.ark import ArkVideoProvider
-from .providers.cogvideo import CogVideoProvider
 from .providers.kling import KlingProvider
 from .providers.minimax import MiniMaxProvider
 from .providers.dashscope import DashScopeProvider
@@ -57,10 +56,6 @@ def _init_providers() -> None:
     ark_key = os.getenv("ARK_VIDEO_API_KEY", "") or os.getenv("ARK_API_KEY", "")
     if ark_key:
         register_provider(ArkVideoProvider(ark_key))
-
-    cogvideo_key = os.getenv("COGVIDEO_API_KEY", "")
-    if cogvideo_key:
-        register_provider(CogVideoProvider(cogvideo_key))
 
     kling_ak = os.getenv("KLING_ACCESS_KEY", "")
     kling_sk = os.getenv("KLING_SECRET_KEY", "")
@@ -172,7 +167,7 @@ def _default_provider_name() -> str | None:
     preferred = os.getenv("DEFAULT_VIDEO_PROVIDER", "")
     if preferred in providers:
         return preferred
-    for name in ("ark", "cogvideo", "dashscope", "kling", "siliconflow", "vidu", "minimax", "veo"):
+    for name in ("ark", "dashscope", "kling", "siliconflow", "vidu", "minimax", "veo"):
         if name in providers:
             return name
     return None
@@ -596,7 +591,7 @@ async def main():
             write_stream,
             InitializationOptions(
                 server_name="mcp-video-gen",
-                server_version="1.3.0",
+                server_version="1.3.1",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},

@@ -8,12 +8,12 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
-  <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version 1.3.0">
+  <img src="https://img.shields.io/badge/version-1.3.1-blue.svg" alt="Version 1.3.1">
 </p>
 
 <p align="center">
   <strong>多平台 AI 视频、语音、音乐、转录 MCP 服务器。</strong><br>
-  8 个视频平台 + 图生视频 + TTS + 音乐 + 语音转文字，统一接口。<br>
+  7 个视频平台 + 图生视频 + TTS + 音乐 + 语音转文字，统一接口。<br>
   支持 Claude Code、Claude Desktop、Cursor 及所有 MCP 兼容客户端。
 </p>
 
@@ -23,7 +23,7 @@
 
 ## 特性
 
-- **8 个视频平台** — 火山方舟 Seedance、智谱、通义万相、可灵、硅基流动、Vidu、海螺、Google Veo (2/3/3.1)
+- **7 个视频平台** — 火山方舟 Seedance、通义万相、可灵、硅基流动、Vidu、海螺、Google Veo (2/3/3.1)
 - **图生视频** — 从参考图片生成视频（Veo）
 - **语音合成** — MiniMax TTS（+ Google Chirp 3 HD 需 ADC）
 - **音乐生成** — MiniMax Music + **Google Lyria**（纯器乐，~33秒，GCP 赠金）
@@ -56,7 +56,6 @@
 | 平台 | 模型 | 免费额度 | 画质 | 时长 | 适用场景 |
 |---|---|---|---|---|---|
 | **火山方舟 Seedance** | doubao-seedance-2.0 | 视频生成计费 | 720p+ | 5-10秒 | Ark 迁移、豆包/Seedance 工作流 |
-| **智谱清影** CogVideoX-Flash | cogvideox-flash | **完全免费** | 1440x960 | 6秒 | 入门、免费使用 |
 | **阿里通义万相** Wan 2.6 | wan2.6-t2v | 50秒（90天） | 最高1080P | 5-10秒 | 高质量、中文内容 |
 | **可灵** Kling AI | kling-v2-master | 每天66积分（网页端） | 720p | 5-10秒 | 画质好，每日免费 |
 | **硅基流动** SiliconFlow | Wan2.1-T2V-14B | 注册送$1 | 720p | 不定 | 快速测试 |
@@ -68,11 +67,8 @@
 
 ```
 需要生成视频？
-  ├─ 正在从智谱迁移 / 使用火山方舟？
+  ├─ 使用火山方舟？
   │   └─ ark ✅（Seedance 视频任务 API）
-  │
-  ├─ 免费 / 初次尝试？
-  │   └─ cogvideo（旧可选 provider）
   │
   ├─ 需要最高画质？
   │   ├─ minimax（国内最好，付费）
@@ -131,10 +127,9 @@ claude mcp add -s user mcp-video-gen \
   --env ARK_VIDEO_MODEL=doubao-seedance-2-0-fast-260128 \
   -- uv --directory /path/to/mcp-video-gen run video-gen
 
-# 完整（含 Veo）
+# 完整（含当前全部 provider 与 Veo）
 claude mcp add -s user mcp-video-gen \
   --env ARK_API_KEY=你的key \
-  --env COGVIDEO_API_KEY=你的key \
   --env KLING_ACCESS_KEY=你的ak \
   --env KLING_SECRET_KEY=你的sk \
   --env MINIMAX_API_KEY=你的key \
@@ -206,7 +201,6 @@ AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status`
 | `ARK_VIDEO_MODEL` | 火山方舟 Seedance | 可选，默认 `doubao-seedance-2-0-fast-260128` |
 | `ARK_VIDEO_RESOLUTION` | 火山方舟 Seedance | 可选，默认 `720p` |
 | `DEFAULT_VIDEO_PROVIDER` | 所有视频平台 | 可选，配置 Ark 时默认优先 `ark` |
-| `COGVIDEO_API_KEY` | 智谱清影 | 旧可选 provider |
 | `DASHSCOPE_API_KEY` | 阿里通义万相 | 一个平台 |
 | `KLING_ACCESS_KEY` | 可灵 | |
 | `KLING_SECRET_KEY` | 可灵 | |
@@ -235,7 +229,6 @@ AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status`
 
 | 错误 | 平台 | 解决方案 |
 |---|---|---|
-| `访问量过大` | 智谱 | 免费模型高峰期过载，稍后重试 |
 | `JWT token error` | 可灵 | 检查 `KLING_ACCESS_KEY` 和 `KLING_SECRET_KEY` 都已设置 |
 | `Auth failed: credentials not found` | Veo | 设置 `GEMINI_API_KEY` 或运行 `gcloud auth application-default login` |
 | `429 quota exceeded` | Veo | Vertex AI 速率限制（10 RPM），等1分钟或换模型 |
@@ -255,7 +248,6 @@ src/video_gen/
 ├── server.py              # MCP 服务器 + 工具定义
 ├── providers/
 │   ├── __init__.py        # Provider 基类 + 注册机制
-│   ├── cogvideo.py        # 智谱 CogVideoX-Flash
 │   ├── dashscope.py       # 阿里 通义万相 Wan 2.7
 │   ├── kling.py           # 可灵 Kling AI (JWT 认证)
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow

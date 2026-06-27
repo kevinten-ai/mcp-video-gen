@@ -1,7 +1,7 @@
 [project]
 name = "mcp-video-gen"
-version = "1.3.0"
-description = "MCP server for AI video, speech, music & transcription with multiple providers. Video: Volcengine Ark Seedance, CogVideoX, DashScope, Kling, SiliconFlow, Vidu, MiniMax, Google Veo. Audio: MiniMax + Google Lyria/TTS/STT."
+version = "1.3.1"
+description = "MCP server for AI video, speech, music & transcription with multiple providers. Video: Volcengine Ark Seedance, DashScope, Kling, SiliconFlow, Vidu, MiniMax, Google Veo. Audio: MiniMax + Google Lyria/TTS/STT."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

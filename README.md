@@ -8,12 +8,12 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
   <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
-  <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version 1.3.0">
+  <img src="https://img.shields.io/badge/version-1.3.1-blue.svg" alt="Version 1.3.1">
 </p>
 
 <p align="center">
   <strong>Multi-provider AI video, speech, music & transcription MCP server.</strong><br>
-  8 video providers + image-to-video + TTS + music + STT — one unified interface.<br>
+  7 video providers + image-to-video + TTS + music + STT — one unified interface.<br>
   Works with Claude Code, Claude Desktop, Cursor, and any MCP-compatible client.
 </p>
 
@@ -23,7 +23,7 @@
 
 ## Features
 
-- **8 video providers** — Volcengine Ark Seedance, CogVideoX, DashScope/Wan, Kling, SiliconFlow, Vidu, MiniMax, Google Veo (2/3/3.1)
+- **7 video providers** — Volcengine Ark Seedance, DashScope/Wan, Kling, SiliconFlow, Vidu, MiniMax, Google Veo (2/3/3.1)
 - **Image-to-video** — generate videos from reference images (Veo)
 - **TTS** — text-to-speech via MiniMax (+ Google Chirp 3 HD with ADC)
 - **Music generation** — MiniMax Music + **Google Lyria** (instrumental, ~33s, GCP credits)
@@ -56,7 +56,6 @@ All video providers use an **async pattern**: submit a generation request, get a
 | Provider | Model | Free Tier | Quality | Duration | Best for |
 |---|---|---|---|---|---|
 | **Volcengine Ark Seedance** | doubao-seedance-2.0 | Paid video API | 720p+ | 5-10s | Ark migration, Doubao/Seedance workflows |
-| **CogVideoX-Flash** (智谱) | cogvideox-flash | **Unlimited free** | 1440x960 | 6s | Getting started, free usage |
 | **DashScope / Wan** (通义万相) | wan2.6-t2v | 50s free (90 days) | Up to 1080P | 5-10s | High quality, Chinese content |
 | **Kling AI** (可灵) | kling-v2-master | 66 credits/day (web only) | 720p | 5-10s | Good quality, daily free credits |
 | **SiliconFlow** (硅基流动) | Wan2.1-T2V-14B | $1 signup bonus | 720p | varies | Quick testing |
@@ -68,11 +67,8 @@ All video providers use an **async pattern**: submit a generation request, get a
 
 ```
 Need a video?
-  ├─ Migrating from Zhipu / using Volcengine Ark?
+  ├─ Using Volcengine Ark?
   │   └─ ark ✅ (Seedance video task API)
-  │
-  ├─ Free / just trying it out?
-  │   └─ cogvideo (legacy optional provider)
   │
   ├─ Need highest quality?
   │   ├─ minimax (best Chinese provider, paid)
@@ -131,10 +127,9 @@ claude mcp add -s user mcp-video-gen \
   --env ARK_VIDEO_MODEL=doubao-seedance-2-0-fast-260128 \
   -- uv --directory /path/to/mcp-video-gen run video-gen
 
-# Full (all providers including Veo)
+# Full (all current providers including Veo)
 claude mcp add -s user mcp-video-gen \
   --env ARK_API_KEY=your_key \
-  --env COGVIDEO_API_KEY=your_key \
   --env KLING_ACCESS_KEY=your_ak \
   --env KLING_SECRET_KEY=your_sk \
   --env MINIMAX_API_KEY=your_key \
@@ -215,26 +210,6 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 4. Optional: set `ARK_VIDEO_MODEL=doubao-seedance-2-0-fast-260128`.
 
 > The Ark video provider calls `/contents/generations/tasks`. It does not use the CodingPlan chat completions endpoint.
-
-</details>
-
-<details>
-<summary><b>2. CogVideoX-Flash (智谱清影) — Legacy optional provider</b></summary>
-
-| Item | Detail |
-|---|---|
-| Platform | 智谱 AI 开放平台 |
-| URL | https://open.bigmodel.cn |
-| Free Tier | **Completely free, no daily limit** |
-| Env Var | `COGVIDEO_API_KEY` |
-
-**Steps:**
-1. Visit https://open.bigmodel.cn → "注册" (Sign Up)
-2. Register with phone number or email
-3. Go to **API Keys**: https://open.bigmodel.cn/usercenter/apikeys
-4. Click "创建 API Key" → copy (format: `xxxxxxxx.xxxxxxxxxx`)
-
-> Note: May be overloaded during peak hours — retry if you get "访问量过大".
 
 </details>
 
@@ -382,7 +357,6 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 | `ARK_VIDEO_MODEL` | Volcengine Ark Seedance | Optional, default: `doubao-seedance-2-0-fast-260128` |
 | `ARK_VIDEO_RESOLUTION` | Volcengine Ark Seedance | Optional, default: `720p` |
 | `DEFAULT_VIDEO_PROVIDER` | All providers | Optional, default prefers `ark` when configured |
-| `COGVIDEO_API_KEY` | CogVideoX (智谱) | Legacy optional provider |
 | `DASHSCOPE_API_KEY` | Wan / DashScope (阿里) | must be configured |
 | `KLING_ACCESS_KEY` | Kling AI (可灵) | |
 | `KLING_SECRET_KEY` | Kling AI (可灵) | |
@@ -411,7 +385,6 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 
 | Error | Provider | Solution |
 |---|---|---|
-| `访问量过大` (too many requests) | CogVideoX | Free model overloaded — wait and retry |
 | `JWT token error` | Kling | Check both `KLING_ACCESS_KEY` and `KLING_SECRET_KEY` are set |
 | `base_resp.status_code != 0` | MiniMax | Check API key, ensure account has balance |
 | `Auth failed: credentials not found` | Veo | Set `GEMINI_API_KEY` or run `gcloud auth application-default login` |
@@ -441,7 +414,6 @@ src/video_gen/
 ├── server.py              # MCP server + tool handlers
 ├── providers/
 │   ├── __init__.py        # BaseProvider abstract class + registry
-│   ├── cogvideo.py        # 智谱 CogVideoX-Flash
 │   ├── dashscope.py       # 阿里 通义万相 Wan 2.6
 │   ├── kling.py           # 可灵 Kling AI (JWT auth)
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow
