@@ -43,18 +43,18 @@ And change version from `"1.0.0"` to `"1.1.0"`.
 
 - [ ] **Step 2: Sync dependencies**
 
-Run: `cd /Users/kevinten/projects/mcp-video-gen && uv sync --extra gcp`
+Run: `cd /Users/kevinten/projects/mcp/mcp-video-gen && uv sync --extra gcp`
 Expected: installs google-auth and its dependencies
 
 - [ ] **Step 3: Verify import works**
 
-Run: `cd /Users/kevinten/projects/mcp-video-gen && uv run --extra gcp python -c "import google.auth; print('ok')"`
+Run: `cd /Users/kevinten/projects/mcp/mcp-video-gen && uv run --extra gcp python -c "import google.auth; print('ok')"`
 Expected: `ok`
 
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/kevinten/projects/mcp-video-gen
+cd /Users/kevinten/projects/mcp/mcp-video-gen
 git add pyproject.toml uv.lock
 git commit -m "feat: add google-auth as optional gcp dependency (v1.1.0)"
 ```
@@ -266,13 +266,13 @@ class VeoProvider(BaseProvider):
 
 - [ ] **Step 2: Verify the file is syntactically correct**
 
-Run: `cd /Users/kevinten/projects/mcp-video-gen && uv run --extra gcp python -c "from video_gen.providers.veo import VeoProvider; print('ok')"`
+Run: `cd /Users/kevinten/projects/mcp/mcp-video-gen && uv run --extra gcp python -c "from video_gen.providers.veo import VeoProvider; print('ok')"`
 Expected: `ok`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/kevinten/projects/mcp-video-gen
+cd /Users/kevinten/projects/mcp/mcp-video-gen
 git add src/video_gen/providers/veo.py
 git commit -m "feat: add VeoProvider with Vertex AI predictLongRunning support"
 ```
@@ -371,13 +371,13 @@ Change `server_version="1.0.0"` to `server_version="1.1.0"` (around line 410).
 
 - [ ] **Step 6: Verify server starts without GCP config**
 
-Run: `cd /Users/kevinten/projects/mcp-video-gen && uv run python -c "from video_gen.server import server; print('ok')"`
+Run: `cd /Users/kevinten/projects/mcp/mcp-video-gen && uv run python -c "from video_gen.server import server; print('ok')"`
 Expected: `ok` (Veo not registered since GCP_PROJECT_ID not set, but no import error)
 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/kevinten/projects/mcp-video-gen
+cd /Users/kevinten/projects/mcp/mcp-video-gen
 git add src/video_gen/server.py
 git commit -m "feat: register VeoProvider, handle local file paths in query result"
 ```
@@ -447,7 +447,7 @@ Add rows:
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/kevinten/projects/mcp-video-gen
+cd /Users/kevinten/projects/mcp/mcp-video-gen
 git add README.md
 git commit -m "docs: add Veo provider setup and configuration to README"
 ```
@@ -469,7 +469,7 @@ Add equivalent Chinese content:
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/kevinten/projects/mcp-video-gen
+cd /Users/kevinten/projects/mcp/mcp-video-gen
 git add README_CN.md
 git commit -m "docs: add Veo provider to Chinese README"
 ```
@@ -484,7 +484,7 @@ git commit -m "docs: add Veo provider to Chinese README"
 
 Run:
 ```bash
-cd /Users/kevinten/projects/mcp-video-gen
+cd /Users/kevinten/projects/mcp/mcp-video-gen
 GCP_PROJECT_ID=logical-bird-240509 GCP_REGION=us-central1 \
   uv run --extra gcp python -c "
 from video_gen.providers import list_providers
@@ -501,7 +501,7 @@ Expected: `OK: Veo registered`
 Run:
 ```bash
 GCP_PROJECT_ID=logical-bird-240509 \
-  npx @modelcontextprotocol/inspector uv --directory /Users/kevinten/projects/mcp-video-gen --extra gcp run video-gen
+  npx @modelcontextprotocol/inspector uv --directory /Users/kevinten/projects/mcp/mcp-video-gen --extra gcp run video-gen
 ```
 
 Call `generate_video` with `provider=veo`, `prompt="A drone shot flying over ocean waves at sunset"`.
@@ -513,6 +513,6 @@ Expected: Eventually returns "success" with saved file path.
 - [ ] **Step 3: Final push**
 
 ```bash
-cd /Users/kevinten/projects/mcp-video-gen
+cd /Users/kevinten/projects/mcp/mcp-video-gen
 git push
 ```
