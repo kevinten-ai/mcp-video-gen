@@ -21,11 +21,11 @@ MODELS = {
 
 
 def _api_base() -> str:
-    """Return a video-generation Ark API base URL, never the CodingPlan chat URL."""
+    """Return a video API base URL, never a Coding/Agent Plan chat URL."""
     configured = os.getenv("ARK_VIDEO_BASE_URL", "").strip()
     if not configured:
         configured = os.getenv("ARK_BASE_URL", "").strip()
-    if not configured or "/api/coding/" in configured:
+    if not configured or any(path in configured for path in ("/api/coding", "/api/plan")):
         configured = DEFAULT_API_BASE
     return configured.rstrip("/")
 
@@ -97,7 +97,7 @@ class ArkVideoProvider(BaseProvider):
 
     @property
     def free_tier_info(self) -> str:
-        return "Paid Ark video generation; may not be covered by CodingPlan chat quota"
+        return "Paid Ark video generation; coverage depends on the Agent Plan video entitlement"
 
     @property
     def models(self) -> dict:
