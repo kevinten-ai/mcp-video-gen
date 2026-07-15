@@ -19,6 +19,7 @@ Multi-provider MCP server for AI video, speech, music, and transcription. 7 vide
 - **Optional deps**: `google-auth` is in `[project.optional-dependencies]` under `gcp` extra. Import wrapped in `try/except ImportError`.
 - **Local file detection**: `query_video_status` checks if `video_url` starts with `/` to skip HTTP download (Veo base64 mode saves locally in `query()`)
 - **img2vid**: `BaseProvider.generate()` accepts optional `image_url` param. Only VeoProvider uses it; others ignore.
+- **Veo reference image boundary**: local files, `gs://` URIs, and public HTTP(S) URLs are accepted. Reject localhost, `.local`, and private/loopback IP-literal URLs; verify TLS; cap local/remote images at 20 MiB.
 - **Lyria is synchronous**: Uses `:predict` (not `predictLongRunning`), returns audio inline. Response field is `bytesBase64Encoded` (same as Imagen).
 - **Google TTS requires ADC**: Cloud TTS endpoint rejects Vertex AI API keys. Only registered when `google.auth.default()` succeeds.
 - **STT module is standalone**: Not a provider class — just an async `transcribe()` function called directly from server.py.

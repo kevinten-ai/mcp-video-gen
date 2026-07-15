@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import base64
+import ipaddress
 from pathlib import Path
 from datetime import datetime
 import os
+from urllib.parse import urlsplit
 
 import httpx
 from . import BaseProvider, VideoResult
@@ -21,6 +23,22 @@ MODELS = {
 
 DEFAULT_MODEL = os.getenv("VEO_MODEL", "veo-3.1-fast-generate-001")
 GCS_BUCKET = os.getenv("VEO_GCS_BUCKET", "")
+MAX_REFERENCE_IMAGE_BYTES = 20 * 1024 * 1024
+
+
+def _is_safe_remote_image_url(url: str) -> bool:
+    parsed = urlsplit(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return False
+
+    hostname = parsed.hostname.rstrip(".").lower()
+    if hostname == "localhost" or hostname.endswith((".localhost", ".local")):
+        return False
+
+    try:
+        return ipaddress.ip_address(hostname).is_global
+    except ValueError:
+        return True
 
 
 def _get_api_key() -> str:
@@ -79,18 +97,39 @@ class VeoProvider(BaseProvider):
         """Load image from local path or URL, return Vertex AI image dict."""
         try:
             if image_url.startswith(("http://", "https://")):
-                async with httpx.AsyncClient(verify=False) as client:
-                    resp = await client.get(image_url, timeout=30.0)
-                    if resp.status_code == 200:
-                        img_b64 = base64.b64encode(resp.content).decode()
-                        mime = resp.headers.get("content-type", "image/png")
+                if not _is_safe_remote_image_url(image_url):
+                    return None
+                async with httpx.AsyncClient() as client:
+                    async with client.stream("GET", image_url, timeout=30.0) as resp:
+                        if resp.status_code != 200:
+                            return None
+                        content_length = resp.headers.get("content-length")
+                        if content_length:
+                            try:
+                                if not 0 <= int(content_length) <= MAX_REFERENCE_IMAGE_BYTES:
+                                    return None
+                            except ValueError:
+                                return None
+                        mime = resp.headers.get("content-type", "image/png").split(";", 1)[0].strip()
+                        if not mime.startswith("image/"):
+                            return None
+                        chunks = []
+                        size = 0
+                        async for chunk in resp.aiter_bytes():
+                            size += len(chunk)
+                            if size > MAX_REFERENCE_IMAGE_BYTES:
+                                return None
+                            chunks.append(chunk)
+                        if size == 0:
+                            return None
+                        img_b64 = base64.b64encode(b"".join(chunks)).decode()
                         return {"bytesBase64Encoded": img_b64, "mimeType": mime}
             elif image_url.startswith("gs://"):
                 return {"gcsUri": image_url, "mimeType": "image/png"}
             else:
                 # Local file path
                 path = Path(image_url)
-                if path.exists():
+                if path.is_file() and path.stat().st_size <= MAX_REFERENCE_IMAGE_BYTES:
                     img_b64 = base64.b64encode(path.read_bytes()).decode()
                     mime = "image/jpeg" if path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
                     return {"bytesBase64Encoded": img_b64, "mimeType": mime}

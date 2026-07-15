@@ -180,6 +180,8 @@ The assistant will call `generate_video`, wait, then call `query_video_status` t
 - **generate_video** — Text-to-video or image-to-video generation. Params: `prompt`, `provider`, `duration` (5/10), `aspect_ratio` (16:9/9:16/1:1), `image_url` (for img2vid, Ark/Veo), `model` (optional provider model ID).
 - **query_video_status** — Poll generation status and auto-download. Params: `task_id`, `provider`.
 
+For Veo image-to-video, reference images may be local files, `gs://` URIs, or public HTTP(S) URLs. Localhost, `.local`, and private/loopback IP-literal URLs are rejected, remote TLS certificates are verified, and reference images are limited to 20 MiB.
+
 ### Audio
 - **generate_speech** — Text-to-speech. Params: `text`, `provider` (minimax/google-tts), `voice_id`, `speed` (0.5-2.0).
 - **generate_music** — AI music generation. Params: `prompt`, `provider` (minimax/google-lyria), `lyrics` (optional, supports `[Verse]`/`[Chorus]`/`[Bridge]`).

@@ -3,6 +3,7 @@ import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import httpx
 from mcp.server.models import InitializationOptions
@@ -11,8 +12,6 @@ from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 
 from .providers import (
-    BaseProvider,
-    VideoResult,
     register_provider,
     get_provider,
     list_providers as get_all_providers,
@@ -30,8 +29,6 @@ except ImportError:
 from .audio import (
     register_tts,
     register_music,
-    get_tts,
-    get_music,
     list_tts as get_all_tts,
     list_music as get_all_music,
 )
@@ -156,7 +153,7 @@ async def handle_read_resource(uri: types.AnyUrl) -> str:
         for mid, info in models.items():
             default_marker = " **(default)**" if mid == provider.default_model else ""
             lines.append(f"| `{mid}` | {info.get('name', mid)}{default_marker} | {info.get('resolution', '-')} | {info.get('pricing', '-')} |")
-        lines.append(f"\nPass `model` parameter to `generate_video` to use a specific model.")
+        lines.append("\nPass `model` parameter to `generate_video` to use a specific model.")
         return "\n".join(lines)
     raise ValueError(f"Unknown resource: {uri_str}")
 
@@ -176,11 +173,17 @@ def _default_provider_name() -> str | None:
 async def _try_download(url: str, output_dir: str, prefix: str, ext: str = "mp4") -> str | None:
     """Try to download file to local disk. Returns filepath or None on failure."""
     try:
+        parsed = urlsplit(url)
+    except ValueError:
+        return None
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    try:
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filepath = out / f"{prefix}_{timestamp}.{ext}"
-        async with httpx.AsyncClient(verify=False, follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             resp = await client.get(url, timeout=120.0)
             if resp.status_code == 200 and len(resp.content) > 0:
                 filepath.write_bytes(resp.content)

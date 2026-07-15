@@ -18,6 +18,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/video_gen"]
 
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.15.21",
+]
+
 [project.optional-dependencies]
 gcp = ["google-auth>=2.20.0", "requests>=2.20.0"]
 

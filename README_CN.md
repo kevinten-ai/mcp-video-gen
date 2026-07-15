@@ -180,6 +180,8 @@ AI 助手会调用 `generate_video`，等待，然后调用 `query_video_status`
 - **generate_video** — 文生视频或图生视频。参数：`prompt`、`provider`、`duration`（5/10）、`aspect_ratio`（16:9/9:16/1:1）、`image_url`（图生视频，Ark/Veo）、`model`（可选模型 ID）
 - **query_video_status** — 轮询状态并自动下载。参数：`task_id`、`provider`
 
+Veo 图生视频的参考图可以使用本地文件、`gs://` URI 或公开 HTTP(S) URL。`localhost`、`.local` 以及私有/回环 IP 字面量 URL 会被拒绝，远程连接会校验 TLS 证书，参考图大小上限为 20 MiB。
+
 ### 音频
 - **generate_speech** — 文字转语音。参数：`text`、`provider`（minimax/google-tts）、`voice_id`、`speed`（0.5-2.0）
 - **generate_music** — AI 音乐生成。参数：`prompt`、`provider`（minimax/google-lyria）、`lyrics`（可选）
