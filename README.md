@@ -416,6 +416,7 @@ src/video_gen/
 ├── server.py              # MCP server + tool handlers
 ├── providers/
 │   ├── __init__.py        # BaseProvider abstract class + registry
+│   ├── ark.py             # Volcengine Ark Seedance
 │   ├── dashscope.py       # 阿里 通义万相 Wan 2.6
 │   ├── kling.py           # 可灵 Kling AI (JWT auth)
 │   ├── siliconflow.py     # 硅基流动 SiliconFlow
